@@ -16,7 +16,7 @@ import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
  * @property {number} saved
  */
 
-/** @type {Map<string, { htmlMinify: Function, presetOptions: Record<string, unknown> }>} */
+/** @type {Map<string, Promise<{ htmlMinify: Function, presetOptions: Record<string, unknown> }>>} */
 const minifierCache = new Map();
 
 /**
@@ -28,24 +28,23 @@ const minifierCache = new Map();
  */
 async function loadMinifier(preset, options) {
   if (!minifierCache.has(preset)) {
-    let htmlMinify, getPreset;
-    try {
-      ({ minify: htmlMinify, getPreset } = await import('html-minifier-next'));
-    } catch {
-      throw new Error('Could not load HTML Minifier Next. Ensure it is installed and check for breaking API changes.');
-    }
-
-    let presetOptions;
-    try {
-      presetOptions = /** @type {Record<string, unknown>} */ (getPreset(preset) ?? {});
-    } catch (err) {
-      throw new Error(`HTML Minifier Next API error—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
-    }
-
-    minifierCache.set(preset, { htmlMinify, presetOptions });
+    minifierCache.set(preset, (async () => {
+      let htmlMinify, getPreset;
+      try {
+        ({ minify: htmlMinify, getPreset } = await import('html-minifier-next'));
+      } catch {
+        throw new Error('Could not load HTML Minifier Next. Ensure it is installed and check for breaking API changes.');
+      }
+      let presetOptions;
+      try {
+        presetOptions = /** @type {Record<string, unknown>} */ (getPreset(preset) ?? {});
+      } catch (err) {
+        throw new Error(`HTML Minifier Next API error—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+      }
+      return { htmlMinify, presetOptions };
+    })());
   }
-
-  const { htmlMinify, presetOptions } = /** @type {{ htmlMinify: Function, presetOptions: Record<string, unknown> }} */ (minifierCache.get(preset));
+  const { htmlMinify, presetOptions } = await /** @type {Promise<{ htmlMinify: Function, presetOptions: Record<string, unknown> }>} */ (minifierCache.get(preset));
   return { htmlMinify, resolvedOptions: { ...presetOptions, ...options } };
 }
 
