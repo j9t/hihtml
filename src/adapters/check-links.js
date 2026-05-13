@@ -12,6 +12,9 @@ export const DEFAULT_LINK_TIMEOUT = 10_000;
 
 const USER_AGENT = `hihtml/${version} link-checker`;
 
+const RE_ATTR = /\b(?:href|src|action)=(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)'|(https?:\/\/[^\s"'`=<>]+))/gi;
+const RE_SRCSET = /\bsrcset=["']([^"']+)["']/gi;
+
 /**
  * @typedef {Object} LinkResult
  * @property {string} url
@@ -47,16 +50,13 @@ const USER_AGENT = `hihtml/${version} link-checker`;
  */
 function extractUrls(content) {
   const urls = new Set();
-  let m;
 
-  const attrRe = /\b(?:href|src|action)=(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)'|(https?:\/\/[^\s"'`=<>]+))/gi;
-  while ((m = attrRe.exec(content)) !== null) {
+  for (const m of content.matchAll(RE_ATTR)) {
     const rawUrl = m[1] ?? m[2] ?? m[3];
     try { urls.add(new URL(rawUrl).href.split('#')[0]); } catch { /* skip malformed URLs */ }
   }
 
-  const srcsetRe = /\bsrcset=["']([^"']+)["']/gi;
-  while ((m = srcsetRe.exec(content)) !== null) {
+  for (const m of content.matchAll(RE_SRCSET)) {
     for (const entry of m[1].split(',')) {
       const candidate = entry.trim().split(/\s+/)[0];
       if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
@@ -164,23 +164,38 @@ async function checkUrl(url, { timeout = DEFAULT_LINK_TIMEOUT, warnOnPermanentRe
 }
 
 /**
- * Returns true if the URL matches any entry in the ignore list.
- * Entries without a path component are matched by hostname (exact or subdomain).
- * Entries containing a slash are matched as URL prefixes.
- * @param {string} url
+ * @typedef {{ hostnames: Set<string>, prefixes: string[] }} IgnoreList
+ */
+
+/**
+ * Pre-process an ignore list into hostname entries (Set for O(1) lookup) and prefix entries.
+ * Entries containing a slash are treated as URL prefixes; others as hostnames (exact or subdomain).
  * @param {string[]} ignore
+ * @returns {IgnoreList}
+ */
+function buildIgnoreList(ignore) {
+  return {
+    hostnames: new Set(ignore.filter(e => !e.includes('/'))),
+    prefixes: ignore.filter(e => e.includes('/')),
+  };
+}
+
+/**
+ * Returns true if the URL matches any entry in the pre-processed ignore list.
+ * @param {string} url
+ * @param {IgnoreList} ignoreList
  * @returns {boolean}
  */
-function isIgnored(url, ignore) {
-  if (ignore.length === 0) return false;
+function isIgnored(url, { hostnames, prefixes }) {
+  if (hostnames.size === 0 && prefixes.length === 0) return false;
+  for (const prefix of prefixes) {
+    if (url.startsWith(prefix)) return true;
+  }
   let hostname;
   try { hostname = new URL(url).hostname; } catch { return false; }
-  for (const entry of ignore) {
-    if (entry.includes('/')) {
-      if (url.startsWith(entry)) return true;
-    } else {
-      if (hostname === entry || hostname.endsWith(`.${entry}`)) return true;
-    }
+  if (hostnames.has(hostname)) return true;
+  for (const h of hostnames) {
+    if (hostname.endsWith(`.${h}`)) return true;
   }
   return false;
 }
@@ -230,10 +245,11 @@ export async function checkLinks(filePaths, {
     for (const url of urls) allUrls.add(url);
   }
 
+  const ignoreList = buildIgnoreList(ignore);
   const toCheck = new Set();
   const toSkip = new Set();
   for (const url of allUrls) {
-    if (isIgnored(url, ignore)) toSkip.add(url);
+    if (isIgnored(url, ignoreList)) toSkip.add(url);
     else toCheck.add(url);
   }
 

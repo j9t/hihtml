@@ -16,27 +16,36 @@ import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
  * @property {number} saved
  */
 
+/** @type {Map<string, { htmlMinify: Function, presetOptions: Record<string, unknown> }>} */
+const minifierCache = new Map();
+
 /**
  * Load HTML Minifier Next and resolve preset and extra options into a merged options object.
+ * The import and preset resolution are cached per preset name.
  * @param {string} preset
  * @param {Record<string, unknown>} options
  * @returns {Promise<{ htmlMinify: Function, resolvedOptions: Record<string, unknown> }>}
  */
 async function loadMinifier(preset, options) {
-  let htmlMinify, getPreset;
-  try {
-    ({ minify: htmlMinify, getPreset } = await import('html-minifier-next'));
-  } catch {
-    throw new Error('Could not load HTML Minifier Next. Ensure it is installed and check for breaking API changes.');
+  if (!minifierCache.has(preset)) {
+    let htmlMinify, getPreset;
+    try {
+      ({ minify: htmlMinify, getPreset } = await import('html-minifier-next'));
+    } catch {
+      throw new Error('Could not load HTML Minifier Next. Ensure it is installed and check for breaking API changes.');
+    }
+
+    let presetOptions;
+    try {
+      presetOptions = /** @type {Record<string, unknown>} */ (getPreset(preset) ?? {});
+    } catch (err) {
+      throw new Error(`HTML Minifier Next API error—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+    }
+
+    minifierCache.set(preset, { htmlMinify, presetOptions });
   }
 
-  let presetOptions;
-  try {
-    presetOptions = getPreset(preset) ?? {};
-  } catch (err) {
-    throw new Error(`HTML Minifier Next API error—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
-  }
-
+  const { htmlMinify, presetOptions } = /** @type {{ htmlMinify: Function, presetOptions: Record<string, unknown> }} */ (minifierCache.get(preset));
   return { htmlMinify, resolvedOptions: { ...presetOptions, ...options } };
 }
 

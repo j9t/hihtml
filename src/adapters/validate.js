@@ -25,14 +25,17 @@ import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
  * @property {number} countIgnored
  */
 
+/** @type {Map<string, import('html-validate').HtmlValidate>} */
+const validatorCache = new Map();
+
 /**
- * Validate HTML files using HTML-validate.
- * @param {string[]} filePaths
- * @param {{ preset?: string, ignore?: string[], concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [options]
- * @returns {Promise<ValidationResult>}
+ * Return a cached HtmlValidate instance for the given preset, creating one if needed.
+ * @param {string} preset
+ * @returns {Promise<import('html-validate').HtmlValidate>}
  */
-export async function validate(filePaths, { preset = 'standard', ignore = [], concurrency = DEFAULT_CONCURRENCY, contents, onProgress } = {}) {
-  const ignoreSet = new Set(Array.isArray(ignore) ? ignore.map(String) : []);
+async function getValidator(preset) {
+  if (validatorCache.has(preset)) return /** @type {import('html-validate').HtmlValidate} */ (validatorCache.get(preset));
+
   let HtmlValidate;
   try {
     ({ HtmlValidate } = await import('html-validate'));
@@ -46,6 +49,20 @@ export async function validate(filePaths, { preset = 'standard', ignore = [], co
   } catch (err) {
     throw new Error(`HTML-validate initialization failed—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
   }
+
+  validatorCache.set(preset, validator);
+  return validator;
+}
+
+/**
+ * Validate HTML files using HTML-validate.
+ * @param {string[]} filePaths
+ * @param {{ preset?: string, ignore?: string[], concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [options]
+ * @returns {Promise<ValidationResult>}
+ */
+export async function validate(filePaths, { preset = 'standard', ignore = [], concurrency = DEFAULT_CONCURRENCY, contents, onProgress } = {}) {
+  const ignoreSet = new Set(Array.isArray(ignore) ? ignore.map(String) : []);
+  const validator = await getValidator(preset);
 
   const files = await runWithConcurrency(filePaths, concurrency, async (filePath) => {
     let content = contents?.get(filePath);

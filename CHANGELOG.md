@@ -14,6 +14,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `minifyString(content, options?)` minifies an HTML string and returns it, without any file I/O—useful in content-pipeline contexts such as Eleventy transforms, middleware, and SSR handlers
 * Extended URL extraction in link checking to also detect URLs in unquoted attributes (e.g., `href=https://example.com`, which is valid HTML)
 
+### Changed
+
+* Improved performance across several areas:
+  - Directory traversal now fans out subdirectories in parallel (`Promise.all`)
+  - `HtmlValidate` instances are cached per preset, avoiding re-initialization across calls to `validate()`/`checkCode()`
+  - URL-extraction regexes in the link checker are compiled once at module load instead of per-call; extraction now uses `matchAll`
+  - HTML Minifier Next import and preset resolution are cached per preset, avoiding repeated work across calls to `minifyString()`
+  - Ignore-list entries are pre-classified into hostnames (Set) and prefix entries once per `checkLinks()` call, enabling O(1) exact-hostname lookup in the hot path
+
 ## [1.2.0-beta] - 2026-05-11
 
 ### Added
