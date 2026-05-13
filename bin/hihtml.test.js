@@ -948,6 +948,14 @@ describe('URL extraction', () => {
   test('`srcset` single-quoted', async () => {
     assert.deepStrictEqual(await found(`<img srcset='${ok()} 2x'>`), { checked: 1, broken: 0 });
   });
+
+  test('`href` with spaces around `=`', async () => {
+    assert.deepStrictEqual(await found(`<a href = "${ok()}">link</a>`), { checked: 1, broken: 0 });
+  });
+
+  test('`srcset` with spaces around `=`', async () => {
+    assert.deepStrictEqual(await found(`<img srcset = "${ok()} 2x">`), { checked: 1, broken: 0 });
+  });
 });
 
 // Programmatic API: `minify`

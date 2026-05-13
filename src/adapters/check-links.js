@@ -12,8 +12,8 @@ export const DEFAULT_LINK_TIMEOUT = 10_000;
 
 const USER_AGENT = `hihtml/${version} link-checker`;
 
-const RE_ATTR = /\b(?:href|src|action)=(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)'|(https?:\/\/[^\s"'`=<>]+))/gi;
-const RE_SRCSET = /\bsrcset=(?:"([^"]+)"|'([^']+)')/gi;
+const RE_ATTR = /\b(?:href|src|action)\s*=\s*(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)'|(https?:\/\/[^\s"'`=<>]+))/gi;
+const RE_SRCSET = /\bsrcset\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
 
 /**
  * @typedef {Object} LinkResult
