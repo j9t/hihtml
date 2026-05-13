@@ -49,9 +49,9 @@ function extractUrls(content) {
   const urls = new Set();
   let m;
 
-  const attrRe = /\b(?:href|src|action)=(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)')/gi;
+  const attrRe = /\b(?:href|src|action)=(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)'|(https?:\/\/[^\s"'`=<>]+))/gi;
   while ((m = attrRe.exec(content)) !== null) {
-    const rawUrl = m[1] ?? m[2];
+    const rawUrl = m[1] ?? m[2] ?? m[3];
     try { urls.add(new URL(rawUrl).href.split('#')[0]); } catch { /* skip malformed URLs */ }
   }
 

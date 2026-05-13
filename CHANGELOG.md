@@ -8,9 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-* Added `checkCodeString(content, options?)` to the programmatic API: validates an HTML string and checks it for deprecated markup, mirroring `checkCode` for string-based pipelines
-* Added `checkLinksString(content, options?)`: checks all external http/https URLs found in an HTML string, mirroring `checkLinks` for string-based pipelines
-* Added `minifyString(content, options?)`: minifies an HTML string and returns it, without any file I/O—useful in content-pipeline contexts such as Eleventy transforms, middleware, and SSR handlers
+* Added string-based functions to programmatic API:
+  - `checkCodeString(content, options?)` validates an HTML string and checks it for deprecated markup, mirroring `checkCode` for string-based pipelines
+  - `checkLinksString(content, options?)` checks all external http/https URLs found in an HTML string, mirroring `checkLinks` for string-based pipelines
+  - `minifyString(content, options?)` minifies an HTML string and returns it, without any file I/O—useful in content-pipeline contexts such as Eleventy transforms, middleware, and SSR handlers
+* Extended URL extraction in link checking to also detect URLs in unquoted attributes (e.g., `href=https://example.com`, which is valid HTML)
 
 ## [1.2.0-beta] - 2026-05-11
 

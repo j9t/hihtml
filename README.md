@@ -119,7 +119,7 @@ const minification = await minify(files, files); // in-place
 // String variants—same result types, no file I/O
 const minified = await minifyString('<p>Hello  world</p>');
 const codeGate = await checkCodeString('<p><div>Nope</div></p>');
-const linksCleaned = await checkLinksString('<a href="https://example.com/">Example</a>');
+const linksCleaned = await checkLinksString('<a href=https://example.com/>Example</a>');
 ```
 
 #### `collect(dir, extensions?, excludedDirs?)`

@@ -896,6 +896,60 @@ describe('Check links string', () => {
   });
 });
 
+// Programmatic API: URL extraction (attributes and quote styles)
+
+describe('URL extraction', () => {
+  const ok = () => `${testServerBase}/ok`;
+  const found = async (html) => {
+    const r = await checkLinksString(html);
+    return { checked: r.countChecked, broken: r.countBroken };
+  };
+
+  test('`href` double-quoted', async () => {
+    assert.deepStrictEqual(await found(`<a href="${ok()}">L</a>`), { checked: 1, broken: 0 });
+  });
+
+  test('`href` single-quoted', async () => {
+    assert.deepStrictEqual(await found(`<a href='${ok()}'>L</a>`), { checked: 1, broken: 0 });
+  });
+
+  test('`href` unquoted', async () => {
+    assert.deepStrictEqual(await found(`<a href=${ok()}>L</a>`), { checked: 1, broken: 0 });
+  });
+
+  test('`src` double-quoted', async () => {
+    assert.deepStrictEqual(await found(`<img src="${ok()}">`), { checked: 1, broken: 0 });
+  });
+
+  test('`src` single-quoted', async () => {
+    assert.deepStrictEqual(await found(`<img src='${ok()}'>`), { checked: 1, broken: 0 });
+  });
+
+  test('`src` unquoted', async () => {
+    assert.deepStrictEqual(await found(`<img src=${ok()}>`), { checked: 1, broken: 0 });
+  });
+
+  test('`action` double-quoted', async () => {
+    assert.deepStrictEqual(await found(`<form action="${ok()}"></form>`), { checked: 1, broken: 0 });
+  });
+
+  test('`action` single-quoted', async () => {
+    assert.deepStrictEqual(await found(`<form action='${ok()}'></form>`), { checked: 1, broken: 0 });
+  });
+
+  test('`action` unquoted', async () => {
+    assert.deepStrictEqual(await found(`<form action=${ok()}></form>`), { checked: 1, broken: 0 });
+  });
+
+  test('`srcset` double-quoted', async () => {
+    assert.deepStrictEqual(await found(`<img srcset="${ok()} 2x">`), { checked: 1, broken: 0 });
+  });
+
+  test('`srcset` single-quoted', async () => {
+    assert.deepStrictEqual(await found(`<img srcset='${ok()} 2x'>`), { checked: 1, broken: 0 });
+  });
+});
+
 // Programmatic API: `minify`
 
 describe('Minify files', () => {
