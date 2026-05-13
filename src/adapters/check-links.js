@@ -13,7 +13,7 @@ export const DEFAULT_LINK_TIMEOUT = 10_000;
 const USER_AGENT = `hihtml/${version} link-checker`;
 
 const RE_ATTR = /\b(?:href|src|action)=(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)'|(https?:\/\/[^\s"'`=<>]+))/gi;
-const RE_SRCSET = /\bsrcset=["']([^"']+)["']/gi;
+const RE_SRCSET = /\bsrcset=(?:"([^"]+)"|'([^']+)')/gi;
 
 /**
  * @typedef {Object} LinkResult
@@ -57,7 +57,7 @@ function extractUrls(content) {
   }
 
   for (const m of content.matchAll(RE_SRCSET)) {
-    for (const entry of m[1].split(',')) {
+    for (const entry of (m[1] ?? m[2]).split(',')) {
       const candidate = entry.trim().split(/\s+/)[0];
       if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
         try { urls.add(new URL(candidate).href.split('#')[0]); } catch { /* skip malformed URLs */ }
