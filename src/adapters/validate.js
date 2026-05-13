@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
 
 /**
- * @typedef {Object} ValidationMessage
+ * @typedef {Object} MessageValidation
  * @property {string} ruleId
  * @property {1|2} severity - 1 = warning, 2 = error
  * @property {string} message
@@ -12,40 +12,66 @@ import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
  */
 
 /**
- * @typedef {Object} FileValidationResult
+ * @typedef {Object} ResultCodeValidationFile
  * @property {string} path
- * @property {ValidationMessage[]} messages
+ * @property {MessageValidation[]} messages
  */
 
 /**
- * @typedef {Object} ValidationResult
- * @property {FileValidationResult[]} files
+ * @typedef {Object} ResultCodeValidation
+ * @property {ResultCodeValidationFile[]} files
  * @property {number} countErrors
  * @property {number} countWarnings
  * @property {number} countIgnored
  */
 
+// Intentionally unbounded: Keyed by preset name, and HTML-validate exposes a
+// fixed small set of presets, so this will never hold more than a handful of entries
+/** @type {Map<string, Promise<import('html-validate').HtmlValidate>>} */
+const validatorCache = new Map();
+
+/**
+ * Return a shared promise for a cached HtmlValidate instance for the given preset.
+ * Caching the promise rather than the resolved value means concurrent callers
+ * share a single initialization rather than each racing past the cache check.
+ * @param {string} preset
+ * @returns {Promise<import('html-validate').HtmlValidate>}
+ */
+function getValidator(preset) {
+  if (validatorCache.has(preset)) return /** @type {Promise<import('html-validate').HtmlValidate>} */ (validatorCache.get(preset));
+
+  const promise = (async () => {
+    let HtmlValidate;
+    try {
+      ({ HtmlValidate } = await import('html-validate'));
+    } catch {
+      throw new Error('Could not load HTML-validate. Ensure it is installed and check for breaking API changes.');
+    }
+
+    let validator;
+    try {
+      validator = new HtmlValidate({ extends: [`html-validate:${preset}`] });
+    } catch (err) {
+      throw new Error(`HTML-validate initialization failed—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+    }
+
+    return validator;
+  })();
+
+  promise.catch(() => validatorCache.delete(preset));
+  validatorCache.set(preset, promise);
+  return promise;
+}
+
 /**
  * Validate HTML files using HTML-validate.
  * @param {string[]} filePaths
  * @param {{ preset?: string, ignore?: string[], concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [options]
- * @returns {Promise<ValidationResult>}
+ * @returns {Promise<ResultCodeValidation>}
  */
 export async function validate(filePaths, { preset = 'standard', ignore = [], concurrency = DEFAULT_CONCURRENCY, contents, onProgress } = {}) {
   const ignoreSet = new Set(Array.isArray(ignore) ? ignore.map(String) : []);
-  let HtmlValidate;
-  try {
-    ({ HtmlValidate } = await import('html-validate'));
-  } catch {
-    throw new Error('Could not load HTML-validate. Ensure it is installed and check for breaking API changes.');
-  }
-
-  let validator;
-  try {
-    validator = new HtmlValidate({ extends: [`html-validate:${preset}`] });
-  } catch (err) {
-    throw new Error(`HTML-validate initialization failed—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
-  }
+  const validator = await getValidator(preset);
 
   const files = await runWithConcurrency(filePaths, concurrency, async (filePath) => {
     let content = contents?.get(filePath);
@@ -55,7 +81,7 @@ export async function validate(filePaths, { preset = 'standard', ignore = [], co
         content = await fs.promises.readFile(filePath, 'utf8');
       } catch (err) {
         onProgress?.();
-        return /** @type {FileValidationResult} */ ({ path: filePath, messages: [{ ruleId: 'io-error', severity: /** @type {2} */ (2), message: err instanceof Error ? err.message : String(err), line: 0, col: 0 }] });
+        return /** @type {ResultCodeValidationFile} */ ({ path: filePath, messages: [{ ruleId: 'io-error', severity: /** @type {2} */ (2), message: err instanceof Error ? err.message : String(err), line: 0, col: 0 }] });
       }
     }
 
@@ -67,7 +93,7 @@ export async function validate(filePaths, { preset = 'standard', ignore = [], co
     }
 
     const raw = report?.results?.[0]?.messages ?? [];
-    /** @type {ValidationMessage[]} */
+    /** @type {MessageValidation[]} */
     const messages = raw.map(m => {
       const ruleId = String(m.ruleId ?? 'unknown');
       return {
@@ -81,7 +107,7 @@ export async function validate(filePaths, { preset = 'standard', ignore = [], co
     });
 
     onProgress?.();
-    return /** @type {FileValidationResult} */ ({ path: filePath, messages });
+    return /** @type {ResultCodeValidationFile} */ ({ path: filePath, messages });
   });
 
   const countErrors = files.reduce((acc, f) => acc + f.messages.filter(m => m.severity === 2 && !m.ignored).length, 0);

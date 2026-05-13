@@ -13,7 +13,7 @@ const s = {
 export { s as style };
 
 /**
- * @param {import('../adapters/validate.js').ValidationResult} result
+ * @param {import('../adapters/validate.js').ResultCodeValidation} result
  * @param {boolean} [quiet]
  * @returns {string}
  */
@@ -59,7 +59,7 @@ export function formatValidationResult(result, quiet = false) {
 }
 
 /**
- * @param {import('../adapters/check-code.js').DeprecationResult} result
+ * @param {import('../adapters/check-code.js').ResultCodeDeprecation} result
  * @param {boolean} [quiet]
  * @returns {string}
  */
@@ -92,7 +92,7 @@ export function formatDeprecationResult(result, quiet = false) {
 }
 
 /**
- * @param {import('../adapters/check-links.js').LinkCheckResult} result
+ * @param {import('../adapters/check-links.js').ResultLinks} result
  * @param {boolean} [quiet]
  * @returns {string}
  */
@@ -168,7 +168,7 @@ export function formatLinkCheckResult(result, quiet = false) {
 }
 
 /**
- * @param {import('../adapters/minify.js').MinificationResult} result
+ * @param {import('../adapters/minify.js').ResultMinification} result
  * @param {boolean} [quiet]
  * @returns {string}
  */

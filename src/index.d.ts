@@ -1,7 +1,7 @@
 export declare const HTML_EXTENSIONS: Set<string>;
 export declare const EXCLUDED_DIRS: Set<string>;
 
-export interface ValidationMessage {
+export interface MessageValidation {
   ruleId: string;
   severity: 1 | 2;
   message: string;
@@ -10,36 +10,36 @@ export interface ValidationMessage {
   ignored?: boolean;
 }
 
-export interface FileValidationResult {
+export interface ResultCodeValidationFile {
   path: string;
-  messages: ValidationMessage[];
+  messages: MessageValidation[];
 }
 
-export interface ValidationResult {
-  files: FileValidationResult[];
+export interface ResultCodeValidation {
+  files: ResultCodeValidationFile[];
   countErrors: number;
   countWarnings: number;
   countIgnored: number;
 }
 
-export interface FileDeprecationResult {
+export interface ResultCodeDeprecationFile {
   path: string;
   elements: string[];
   attributes: string[];
   error?: string;
 }
 
-export interface DeprecationResult {
-  files: FileDeprecationResult[];
+export interface ResultCodeDeprecation {
+  files: ResultCodeDeprecationFile[];
   countIssues: number;
 }
 
-export interface CheckResult {
-  validation: ValidationResult;
-  deprecation: DeprecationResult;
+export interface ResultCode {
+  validation: ResultCodeValidation;
+  deprecation: ResultCodeDeprecation;
 }
 
-export interface LinkResult {
+export interface ResultLinksUrl {
   url: string;
   status: number | null;
   ok: boolean;
@@ -49,34 +49,34 @@ export interface LinkResult {
   error?: string;
 }
 
-export interface FileLinkResult {
+export interface ResultLinksFile {
   path: string;
-  links: LinkResult[];
+  links: ResultLinksUrl[];
   countBroken: number;
   error?: string;
 }
 
-export interface LinkCheckResult {
-  files: FileLinkResult[];
+export interface ResultLinks {
+  files: ResultLinksFile[];
   countBroken: number;
   countChecked: number;
   countSkipped: number;
   countFileErrors: number;
 }
 
-export interface FileMinificationResult {
+export interface ResultMinificationFile {
   path: string;
   sizeOriginal: number;
   sizeMinified: number;
   error?: string;
 }
 
-export interface MinificationResult {
-  files: FileMinificationResult[];
+export interface ResultMinification {
+  files: ResultMinificationFile[];
   saved: number;
 }
 
-export interface HiHTMLConfig {
+export interface HihtmlConfig {
   extensions?: string[];
   ignore?: string[];
   validation?: { preset?: string; ignore?: string[] };
@@ -100,12 +100,17 @@ export declare function read(
   options?: { concurrency?: number; onProgress?: () => void }
 ): Promise<Map<string, string>>;
 
-export declare function loadConfig(cwd?: string, filePath?: string): Promise<HiHTMLConfig>;
+export declare function loadConfig(cwd?: string, filePath?: string): Promise<HihtmlConfig>;
 
 export declare function checkCode(
   filePaths: string[],
   options?: { preset?: string; ignore?: string[]; concurrency?: number; contents?: Map<string, string>; onProgress?: () => void }
-): Promise<CheckResult>;
+): Promise<ResultCode>;
+
+export declare function checkCodeString(
+  content: string,
+  options?: { preset?: string; ignore?: string[] }
+): Promise<ResultCode>;
 
 export declare function checkLinks(
   filePaths: string[],
@@ -118,10 +123,27 @@ export declare function checkLinks(
     onProgress?: () => void;
     onStart?: (total: number) => void;
   }
-): Promise<LinkCheckResult>;
+): Promise<ResultLinks>;
+
+export declare function checkLinksString(
+  content: string,
+  options?: {
+    concurrency?: number;
+    timeout?: number;
+    warnOnPermanentRedirects?: boolean;
+    ignore?: string[];
+    onProgress?: () => void;
+    onStart?: (total: number) => void;
+  }
+): Promise<ResultLinks>;
 
 export declare function minify(
   filePaths: string[],
   outputPaths: string[],
   options?: { preset?: string; options?: Record<string, unknown>; concurrency?: number; contents?: Map<string, string>; onProgress?: () => void }
-): Promise<MinificationResult>;
+): Promise<ResultMinification>;
+
+export declare function minifyString(
+  content: string,
+  options?: { preset?: string; options?: Record<string, unknown> }
+): Promise<string>;

@@ -69,17 +69,19 @@ async function walk(dir, extensions, excludedDirs, results) {
     throw err;
   }
 
+  const subdirs = [];
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isSymbolicLink()) continue;
 
     if (entry.isDirectory()) {
       if (!excludedDirs.has(entry.name)) {
-        await walk(fullPath, extensions, excludedDirs, results);
+        subdirs.push(walk(fullPath, extensions, excludedDirs, results));
       }
     } else if (entry.isFile()) {
       const ext = path.extname(entry.name).slice(1).toLowerCase();
       if (extensions.has(ext)) results.push(fullPath);
     }
   }
+  await Promise.all(subdirs);
 }

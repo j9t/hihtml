@@ -8,9 +8,9 @@ import assert from 'node:assert';
 import { stripVTControlCharacters } from 'node:util';
 
 import { validate } from '../src/adapters/validate.js';
-import { checkCode } from '../src/adapters/check-code.js';
-import { checkLinks } from '../src/adapters/check-links.js';
-import { minify } from '../src/adapters/minify.js';
+import { checkCode, checkCodeString } from '../src/adapters/check-code.js';
+import { checkLinks, checkLinksString } from '../src/adapters/check-links.js';
+import { minify, minifyString } from '../src/adapters/minify.js';
 import { collect, read } from '../src/lib/files.js';
 import { loadConfig } from '../src/lib/config.js';
 
@@ -33,9 +33,9 @@ function run(args, stdinInput = '', cwd = undefined) {
 
 // Fixtures
 
-const CLEAN_HTML = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p>Hello.</p></body></html>';
-const DEPRECATED_HTML = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><center>Old</center></body></html>';
-const INVALID_HTML = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p><div>Bad nesting.</div></p></body></html>';
+const HTML_CLEAN = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p>Yes</p></body></html>';
+const HTML_DEPRECATED = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><center>Not anymore</center></body></html>';
+const HTML_INVALID = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p><div>No</div></p></body></html>';
 
 /** @type {http.Server} */
 let testServer;
@@ -46,9 +46,9 @@ let testServerBase;
 
 before(async () => {
   fs.mkdirSync(tempDir, { recursive: true });
-  fs.writeFileSync(path.join(tempDir, 'clean.html'), CLEAN_HTML);
-  fs.writeFileSync(path.join(tempDir, 'deprecated.html'), DEPRECATED_HTML);
-  fs.writeFileSync(path.join(tempDir, 'invalid.html'), INVALID_HTML);
+  fs.writeFileSync(path.join(tempDir, 'clean.html'), HTML_CLEAN);
+  fs.writeFileSync(path.join(tempDir, 'deprecated.html'), HTML_DEPRECATED);
+  fs.writeFileSync(path.join(tempDir, 'invalid.html'), HTML_INVALID);
 
   testServer = await new Promise(resolve => {
     const server = http.createServer((req, res) => {
@@ -682,6 +682,43 @@ describe('Check code', () => {
   });
 });
 
+// Programmatic API: `checkCodeString`
+
+describe('Check code string', () => {
+  test('Returns expected result shape', async () => {
+    const result = await checkCodeString(HTML_CLEAN);
+    assert.ok('validation' in result);
+    assert.ok('deprecation' in result);
+    assert.ok('countErrors' in result.validation);
+    assert.ok('countIssues' in result.deprecation);
+  });
+
+  test('Clean HTML reports no issues', async () => {
+    const result = await checkCodeString(HTML_CLEAN);
+    assert.strictEqual(result.validation.countErrors, 0);
+    assert.strictEqual(result.deprecation.countIssues, 0);
+  });
+
+  test('Detects deprecated markup', async () => {
+    const result = await checkCodeString(HTML_DEPRECATED);
+    assert.ok(result.deprecation.countIssues > 0);
+    assert.ok(result.deprecation.files[0].elements.includes('center'));
+  });
+
+  test('Detects validation errors', async () => {
+    const result = await checkCodeString(HTML_INVALID);
+    assert.ok(result.validation.countErrors > 0);
+  });
+
+  test('Passes ignore list through to validation result', async () => {
+    const base = await checkCodeString(HTML_INVALID);
+    const ruleIds = [...new Set(base.validation.files[0].messages.map(m => m.ruleId))];
+    const result = await checkCodeString(HTML_INVALID, { ignore: ruleIds });
+    assert.strictEqual(result.validation.countErrors, 0);
+    assert.strictEqual(result.validation.countIgnored, base.validation.files[0].messages.length);
+  });
+});
+
 // Programmatic API: `checkLinks`
 
 describe('Check links', () => {
@@ -804,7 +841,7 @@ describe('Check links', () => {
     assert.strictEqual(result.countSkipped, 1);
   });
 
-  test('Ignored URLs are not counted as broken', async () => {
+  test('Does not count ignored URLs as broken', async () => {
     const result = await checkLinks([path.join(tempDir, 'links_mixed.html')], {
       ignore: ['127.0.0.1'],
     });
@@ -824,6 +861,116 @@ describe('Check links', () => {
     assert.strictEqual(result.countChecked, 1);
     assert.strictEqual(result.countBroken, 0);
     assert.strictEqual(result.files[0].links[0].ok, true);
+  });
+});
+
+// Programmatic API: `checkLinksString`
+
+describe('Check links string', () => {
+  test('Returns expected result shape', async () => {
+    const result = await checkLinksString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="${testServerBase}/ok">OK</a></body></html>`);
+    assert.ok('files' in result);
+    assert.ok('countBroken' in result);
+    assert.ok('countChecked' in result);
+    assert.ok(Array.isArray(result.files));
+  });
+
+  test('Reports ok for 200 response', async () => {
+    const result = await checkLinksString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="${testServerBase}/ok">OK</a></body></html>`);
+    assert.strictEqual(result.countBroken, 0);
+    assert.strictEqual(result.countChecked, 1);
+    assert.strictEqual(result.files[0].links[0].ok, true);
+  });
+
+  test('Reports broken for 404 response', async () => {
+    const result = await checkLinksString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="${testServerBase}/not-found">Broken</a></body></html>`);
+    assert.strictEqual(result.countBroken, 1);
+    assert.strictEqual(result.files[0].links[0].ok, false);
+  });
+
+  test('No http/https links returns empty result', async () => {
+    const result = await checkLinksString(HTML_CLEAN);
+    assert.strictEqual(result.countBroken, 0);
+    assert.strictEqual(result.countChecked, 0);
+    assert.strictEqual(result.files[0].links.length, 0);
+  });
+});
+
+// Programmatic API: URL extraction (attributes and quote styles)
+
+describe('URL extraction', () => {
+  const ok = () => `${testServerBase}/ok`;
+  const found = async (html) => {
+    const r = await checkLinksString(html);
+    return { checked: r.countChecked, broken: r.countBroken };
+  };
+
+  test('`href` double-quoted', async () => {
+    assert.deepStrictEqual(await found(`<a href="${ok()}">L</a>`), { checked: 1, broken: 0 });
+  });
+
+  test('`href` single-quoted', async () => {
+    assert.deepStrictEqual(await found(`<a href='${ok()}'>L</a>`), { checked: 1, broken: 0 });
+  });
+
+  test('`href` unquoted', async () => {
+    assert.deepStrictEqual(await found(`<a href=${ok()}>L</a>`), { checked: 1, broken: 0 });
+  });
+
+  test('`src` double-quoted', async () => {
+    assert.deepStrictEqual(await found(`<img src="${ok()}">`), { checked: 1, broken: 0 });
+  });
+
+  test('`src` single-quoted', async () => {
+    assert.deepStrictEqual(await found(`<img src='${ok()}'>`), { checked: 1, broken: 0 });
+  });
+
+  test('`src` unquoted', async () => {
+    assert.deepStrictEqual(await found(`<img src=${ok()}>`), { checked: 1, broken: 0 });
+  });
+
+  test('`action` double-quoted', async () => {
+    assert.deepStrictEqual(await found(`<form action="${ok()}"></form>`), { checked: 1, broken: 0 });
+  });
+
+  test('`action` single-quoted', async () => {
+    assert.deepStrictEqual(await found(`<form action='${ok()}'></form>`), { checked: 1, broken: 0 });
+  });
+
+  test('`action` unquoted', async () => {
+    assert.deepStrictEqual(await found(`<form action=${ok()}></form>`), { checked: 1, broken: 0 });
+  });
+
+  test('`srcset` double-quoted', async () => {
+    assert.deepStrictEqual(await found(`<img srcset="${ok()} 2x">`), { checked: 1, broken: 0 });
+  });
+
+  test('`srcset` single-quoted', async () => {
+    assert.deepStrictEqual(await found(`<img srcset='${ok()} 2x'>`), { checked: 1, broken: 0 });
+  });
+
+  test('`href` with spaces around `=`', async () => {
+    assert.deepStrictEqual(await found(`<a href = "${ok()}">link</a>`), { checked: 1, broken: 0 });
+  });
+
+  test('`srcset` with spaces around `=`', async () => {
+    assert.deepStrictEqual(await found(`<img srcset = "${ok()} 2x">`), { checked: 1, broken: 0 });
+  });
+
+  test('Does not check URLs inside HTML comments', async () => {
+    assert.deepStrictEqual(await found(`<!-- <a href="${ok()}">ignored</a> -->`), { checked: 0, broken: 0 });
+  });
+
+  test('Does not check URLs inside `<script>` body', async () => {
+    assert.deepStrictEqual(await found(`<script>var u = "${ok()}";</script>`), { checked: 0, broken: 0 });
+  });
+
+  test('Still checks `<script src>`', async () => {
+    assert.deepStrictEqual(await found(`<script src="${ok()}"></script>`), { checked: 1, broken: 0 });
+  });
+
+  test('Does not check URLs inside `<style>` body', async () => {
+    assert.deepStrictEqual(await found(`<style>a::before { content: "${ok()}"; }</style>`), { checked: 0, broken: 0 });
   });
 });
 
@@ -902,6 +1049,31 @@ describe('Minify files', () => {
   });
 });
 
+// Programmatic API: `minifyString`
+
+describe('Minify string', () => {
+  test('Returns a string', async () => {
+    const result = await minifyString(HTML_CLEAN);
+    assert.strictEqual(typeof result, 'string');
+  });
+
+  test('Output is not larger than input', async () => {
+    const result = await minifyString(HTML_CLEAN);
+    assert.ok(Buffer.byteLength(result) <= Buffer.byteLength(HTML_CLEAN));
+  });
+
+  test('Collapses whitespace with default preset', async () => {
+    const result = await minifyString('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><p>  Hello   world  </p></body></html>');
+    assert.ok(!result.includes('  Hello'));
+  });
+
+  test('Respects options override', async () => {
+    const loose = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><p>  Hello   world  </p></body></html>';
+    const result = await minifyString(loose, { options: { collapseWhitespace: false } });
+    assert.ok(result.includes('  Hello'));
+  });
+});
+
 // Programmatic API: `read`
 
 describe('Read files', () => {
@@ -911,7 +1083,7 @@ describe('Read files', () => {
     const result = await read([fileClean]);
     assert.ok(result instanceof Map);
     assert.ok(result.has(fileClean));
-    assert.ok(result.get(fileClean).includes('Hello'));
+    assert.ok(result.get(fileClean).includes('Yes'));
   });
 
   test('Skips unreadable files gracefully', async () => {

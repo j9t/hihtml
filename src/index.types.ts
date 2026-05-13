@@ -1,18 +1,21 @@
 import type {
-  ValidationResult,
-  DeprecationResult,
-  CheckResult,
-  LinkResult,
-  FileLinkResult,
-  LinkCheckResult,
-  MinificationResult,
-  HiHTMLConfig,
+  ResultCodeValidation,
+  ResultCodeDeprecation,
+  ResultCode,
+  ResultLinksUrl,
+  ResultLinksFile,
+  ResultLinks,
+  ResultMinification,
+  HihtmlConfig,
 } from './index.js';
 
 import {
   checkCode,
+  checkCodeString,
   checkLinks,
+  checkLinksString,
   minify,
+  minifyString,
   collect,
   read,
   loadConfig,
@@ -21,20 +24,23 @@ import {
 } from './index.js';
 
 export type {
-  ValidationResult,
-  DeprecationResult,
-  CheckResult,
-  LinkResult,
-  FileLinkResult,
-  LinkCheckResult,
-  MinificationResult,
-  HiHTMLConfig,
+  ResultCodeValidation,
+  ResultCodeDeprecation,
+  ResultCode,
+  ResultLinksUrl,
+  ResultLinksFile,
+  ResultLinks,
+  ResultMinification,
+  HihtmlConfig,
 };
 
 export {
   checkCode,
+  checkCodeString,
   checkLinks,
+  checkLinksString,
   minify,
+  minifyString,
   collect,
   read,
   loadConfig,

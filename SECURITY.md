@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Only the latest and therefore current version of HiHTML is supported. It’s advised to update older versions to the latest version.
+Only the latest and therefore current version of hihtml is supported. It’s advised to update older versions to the latest version.
 
 ## Reporting a Vulnerability
 

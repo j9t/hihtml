@@ -12,8 +12,11 @@ export const DEFAULT_LINK_TIMEOUT = 10_000;
 
 const USER_AGENT = `hihtml/${version} link-checker`;
 
+const RE_ATTR = /\b(?:href|src|action)\s*=\s*(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)'|(https?:\/\/[^\s"'`=<>]+))/gi;
+const RE_SRCSET = /\bsrcset\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
+
 /**
- * @typedef {Object} LinkResult
+ * @typedef {Object} ResultLinksUrl
  * @property {string} url
  * @property {number|null} status
  * @property {boolean} ok
@@ -24,16 +27,16 @@ const USER_AGENT = `hihtml/${version} link-checker`;
  */
 
 /**
- * @typedef {Object} FileLinkResult
+ * @typedef {Object} ResultLinksFile
  * @property {string} path
- * @property {LinkResult[]} links
+ * @property {ResultLinksUrl[]} links
  * @property {number} countBroken
  * @property {string} [error]
  */
 
 /**
- * @typedef {Object} LinkCheckResult
- * @property {FileLinkResult[]} files
+ * @typedef {Object} ResultLinks
+ * @property {ResultLinksFile[]} files
  * @property {number} countBroken
  * @property {number} countChecked
  * @property {number} countSkipped
@@ -47,17 +50,19 @@ const USER_AGENT = `hihtml/${version} link-checker`;
  */
 function extractUrls(content) {
   const urls = new Set();
-  let m;
 
-  const attrRe = /\b(?:href|src|action)=(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)')/gi;
-  while ((m = attrRe.exec(content)) !== null) {
-    const rawUrl = m[1] ?? m[2];
+  const stripped = content
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/(<script\b[^>]*>)[\s\S]*?<\/script>/gi, '$1</script>')
+    .replace(/(<style\b[^>]*>)[\s\S]*?<\/style>/gi, '$1</style>');
+
+  for (const m of stripped.matchAll(RE_ATTR)) {
+    const rawUrl = m[1] ?? m[2] ?? m[3];
     try { urls.add(new URL(rawUrl).href.split('#')[0]); } catch { /* skip malformed URLs */ }
   }
 
-  const srcsetRe = /\bsrcset=["']([^"']+)["']/gi;
-  while ((m = srcsetRe.exec(content)) !== null) {
-    for (const entry of m[1].split(',')) {
+  for (const m of stripped.matchAll(RE_SRCSET)) {
+    for (const entry of (m[1] ?? m[2]).split(',')) {
       const candidate = entry.trim().split(/\s+/)[0];
       if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
         try { urls.add(new URL(candidate).href.split('#')[0]); } catch { /* skip malformed URLs */ }
@@ -106,7 +111,7 @@ function requestSingle(url, method, timeout) {
  * Falls back from HEAD to GET on 405. Optionally warns on permanent redirects.
  * @param {string} url
  * @param {{ timeout?: number, warnOnPermanentRedirects?: boolean }} [options]
- * @returns {Promise<LinkResult>}
+ * @returns {Promise<ResultLinksUrl>}
  */
 async function checkUrl(url, { timeout = DEFAULT_LINK_TIMEOUT, warnOnPermanentRedirects = false } = {}) {
   let currentUrl = url;
@@ -164,23 +169,43 @@ async function checkUrl(url, { timeout = DEFAULT_LINK_TIMEOUT, warnOnPermanentRe
 }
 
 /**
- * Returns true if the URL matches any entry in the ignore list.
- * Entries without a path component are matched by hostname (exact or subdomain).
- * Entries containing a slash are matched as URL prefixes.
- * @param {string} url
+ * @typedef {{ hostnames: Set<string>, prefixes: string[] }} IgnoreList
+ */
+
+/**
+ * Pre-process an ignore list into hostname entries (Set for O(1) lookup) and prefix entries.
+ * Entries containing a slash are treated as URL prefixes; others as hostnames (exact or subdomain).
  * @param {string[]} ignore
+ * @returns {IgnoreList}
+ */
+function buildIgnoreList(ignore) {
+  const normalized = ignore.map(e => e.trim().toLowerCase());
+  return {
+    hostnames: new Set(normalized.filter(e => !e.includes('/'))),
+    prefixes: normalized.filter(e => e.includes('/')).map(e => e.replace(/\/+$/, '')),
+  };
+}
+
+/**
+ * Returns true if the URL matches any entry in the pre-processed ignore list.
+ * @param {string} url
+ * @param {IgnoreList} ignoreList
  * @returns {boolean}
  */
-function isIgnored(url, ignore) {
-  if (ignore.length === 0) return false;
-  let hostname;
-  try { hostname = new URL(url).hostname; } catch { return false; }
-  for (const entry of ignore) {
-    if (entry.includes('/')) {
-      if (url.startsWith(entry)) return true;
-    } else {
-      if (hostname === entry || hostname.endsWith(`.${entry}`)) return true;
-    }
+function isIgnored(url, { hostnames, prefixes }) {
+  if (hostnames.size === 0 && prefixes.length === 0) return false;
+  let parsed;
+  try { parsed = new URL(url); } catch { return false; }
+  for (const prefix of prefixes) {
+    const target = prefix.startsWith('/')
+      ? parsed.pathname.toLowerCase()
+      : (parsed.origin + parsed.pathname).toLowerCase();
+    if (target === prefix || target.startsWith(prefix + '/')) return true;
+  }
+  const { hostname } = parsed;
+  if (hostnames.has(hostname)) return true;
+  for (const h of hostnames) {
+    if (hostname.endsWith(`.${h}`)) return true;
   }
   return false;
 }
@@ -198,7 +223,7 @@ function isIgnored(url, ignore) {
  *   onProgress?: () => void,
  *   onStart?: (total: number) => void,
  * }} [options]
- * @returns {Promise<LinkCheckResult>}
+ * @returns {Promise<ResultLinks>}
  */
 export async function checkLinks(filePaths, {
   concurrency = DEFAULT_LINK_CONCURRENCY,
@@ -230,16 +255,17 @@ export async function checkLinks(filePaths, {
     for (const url of urls) allUrls.add(url);
   }
 
+  const ignoreList = buildIgnoreList(ignore);
   const toCheck = new Set();
   const toSkip = new Set();
   for (const url of allUrls) {
-    if (isIgnored(url, ignore)) toSkip.add(url);
+    if (isIgnored(url, ignoreList)) toSkip.add(url);
     else toCheck.add(url);
   }
 
   onStart?.(toCheck.size);
 
-  /** @type {Map<string, LinkResult>} */
+  /** @type {Map<string, ResultLinksUrl>} */
   const urlResults = new Map();
 
   for (const url of toSkip) {
@@ -253,15 +279,34 @@ export async function checkLinks(filePaths, {
 
   const files = filePaths.map(filePath => {
     const data = fileData.get(filePath) ?? { urls: [], error: 'Unknown error' };
-    if (data.error) return /** @type {FileLinkResult} */ ({ path: filePath, links: [], countBroken: 0, error: data.error });
+    if (data.error) return /** @type {ResultLinksFile} */ ({ path: filePath, links: [], countBroken: 0, error: data.error });
 
-    const links = data.urls.map(url => /** @type {LinkResult} */ ({ ...urlResults.get(url), url }));
+    const links = data.urls.map(url => /** @type {ResultLinksUrl} */ ({ ...urlResults.get(url), url }));
     const countBroken = links.filter(l => !l.ok).length;
-    return /** @type {FileLinkResult} */ ({ path: filePath, links, countBroken });
+    return /** @type {ResultLinksFile} */ ({ path: filePath, links, countBroken });
   });
 
   const countBroken = [...urlResults.values()].filter(r => !r.ok).length;
   const countSkipped = toSkip.size;
   const countFileErrors = files.filter(f => f.error !== undefined).length;
   return { files, countBroken, countChecked: toCheck.size, countSkipped, countFileErrors };
+}
+
+const SYNTHETIC_PATH = '(string input)';
+
+/**
+ * Check all external http/https URLs found in an HTML string.
+ * @param {string} content
+ * @param {{
+ *   concurrency?: number,
+ *   timeout?: number,
+ *   warnOnPermanentRedirects?: boolean,
+ *   ignore?: string[],
+ *   onProgress?: () => void,
+ *   onStart?: (total: number) => void,
+ * }} [options]
+ * @returns {Promise<ResultLinks>}
+ */
+export async function checkLinksString(content, options = {}) {
+  return checkLinks([SYNTHETIC_PATH], { ...options, contents: new Map([[SYNTHETIC_PATH, content]]) });
 }
