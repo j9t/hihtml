@@ -33,9 +33,9 @@ function run(args, stdinInput = '', cwd = undefined) {
 
 // Fixtures
 
-const CLEAN_HTML = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p>Hello.</p></body></html>';
-const DEPRECATED_HTML = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><center>Old</center></body></html>';
-const INVALID_HTML = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p><div>Bad nesting.</div></p></body></html>';
+const HTML_CLEAN = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p>Hello.</p></body></html>';
+const HTML_DEPRECATED = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><center>Old</center></body></html>';
+const HTML_INVALID = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p><div>Bad nesting.</div></p></body></html>';
 
 /** @type {http.Server} */
 let testServer;
@@ -46,9 +46,9 @@ let testServerBase;
 
 before(async () => {
   fs.mkdirSync(tempDir, { recursive: true });
-  fs.writeFileSync(path.join(tempDir, 'clean.html'), CLEAN_HTML);
-  fs.writeFileSync(path.join(tempDir, 'deprecated.html'), DEPRECATED_HTML);
-  fs.writeFileSync(path.join(tempDir, 'invalid.html'), INVALID_HTML);
+  fs.writeFileSync(path.join(tempDir, 'clean.html'), HTML_CLEAN);
+  fs.writeFileSync(path.join(tempDir, 'deprecated.html'), HTML_DEPRECATED);
+  fs.writeFileSync(path.join(tempDir, 'invalid.html'), HTML_INVALID);
 
   testServer = await new Promise(resolve => {
     const server = http.createServer((req, res) => {
@@ -686,7 +686,7 @@ describe('Check code', () => {
 
 describe('Check code string', () => {
   test('Returns expected result shape', async () => {
-    const result = await checkCodeString(CLEAN_HTML);
+    const result = await checkCodeString(HTML_CLEAN);
     assert.ok('validation' in result);
     assert.ok('deprecation' in result);
     assert.ok('countErrors' in result.validation);
@@ -694,26 +694,26 @@ describe('Check code string', () => {
   });
 
   test('Clean HTML reports no issues', async () => {
-    const result = await checkCodeString(CLEAN_HTML);
+    const result = await checkCodeString(HTML_CLEAN);
     assert.strictEqual(result.validation.countErrors, 0);
     assert.strictEqual(result.deprecation.countIssues, 0);
   });
 
   test('Detects deprecated markup', async () => {
-    const result = await checkCodeString(DEPRECATED_HTML);
+    const result = await checkCodeString(HTML_DEPRECATED);
     assert.ok(result.deprecation.countIssues > 0);
     assert.ok(result.deprecation.files[0].elements.includes('center'));
   });
 
   test('Detects validation errors', async () => {
-    const result = await checkCodeString(INVALID_HTML);
+    const result = await checkCodeString(HTML_INVALID);
     assert.ok(result.validation.countErrors > 0);
   });
 
   test('Passes ignore list through to validation result', async () => {
-    const base = await checkCodeString(INVALID_HTML);
+    const base = await checkCodeString(HTML_INVALID);
     const ruleIds = [...new Set(base.validation.files[0].messages.map(m => m.ruleId))];
-    const result = await checkCodeString(INVALID_HTML, { ignore: ruleIds });
+    const result = await checkCodeString(HTML_INVALID, { ignore: ruleIds });
     assert.strictEqual(result.validation.countErrors, 0);
     assert.strictEqual(result.validation.countIgnored, base.validation.files[0].messages.length);
   });
@@ -889,7 +889,7 @@ describe('Check links string', () => {
   });
 
   test('No http/https links returns empty result', async () => {
-    const result = await checkLinksString(CLEAN_HTML);
+    const result = await checkLinksString(HTML_CLEAN);
     assert.strictEqual(result.countBroken, 0);
     assert.strictEqual(result.countChecked, 0);
     assert.strictEqual(result.files[0].links.length, 0);
@@ -1053,13 +1053,13 @@ describe('Minify files', () => {
 
 describe('Minify string', () => {
   test('Returns a string', async () => {
-    const result = await minifyString(CLEAN_HTML);
+    const result = await minifyString(HTML_CLEAN);
     assert.strictEqual(typeof result, 'string');
   });
 
   test('Output is not larger than input', async () => {
-    const result = await minifyString(CLEAN_HTML);
-    assert.ok(Buffer.byteLength(result) <= Buffer.byteLength(CLEAN_HTML));
+    const result = await minifyString(HTML_CLEAN);
+    assert.ok(Buffer.byteLength(result) <= Buffer.byteLength(HTML_CLEAN));
   });
 
   test('Collapses whitespace with default preset', async () => {
