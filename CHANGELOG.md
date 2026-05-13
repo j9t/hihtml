@@ -30,7 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 * Added `validation.ignore`, a list of HTML-validate rule IDs to suppress, mirroring `links.ignore`
   - Ignored messages appear in validation output (marked as ignored) but are not counted as errors and do not block minification when using `--all`/`-a`
   - Supported in configuration (`.hihtml.json`/`package.json`) and programmatically via `checkCode(files, { ignore: […] })`
-  - `ValidationResult` now includes `countIgnored`; `ValidationMessage` now includes `ignored?: boolean`
+  - `ResultCodeValidation` now includes `countIgnored`; `MessageValidation` now includes `ignored?: boolean`
 * Added `-s`/`--settings <file>` flag to load configuration from a specific JSON file, overriding the default CWD config lookup
   - Accepts any JSON file, reading the `"hihtml"` key if present (same convention as `package.json`), otherwise using the root object
   - `loadConfig()` now accepts an optional `filePath` parameter for the same behavior programmatically

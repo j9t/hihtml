@@ -16,7 +16,7 @@ const RE_ATTR = /\b(?:href|src|action)\s*=\s*(?:"(https?:\/\/[^"\s>]+)"|'(https?
 const RE_SRCSET = /\bsrcset\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
 
 /**
- * @typedef {Object} LinkResult
+ * @typedef {Object} ResultLinksUrl
  * @property {string} url
  * @property {number|null} status
  * @property {boolean} ok
@@ -27,16 +27,16 @@ const RE_SRCSET = /\bsrcset\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
  */
 
 /**
- * @typedef {Object} FileLinkResult
+ * @typedef {Object} ResultLinksFile
  * @property {string} path
- * @property {LinkResult[]} links
+ * @property {ResultLinksUrl[]} links
  * @property {number} countBroken
  * @property {string} [error]
  */
 
 /**
- * @typedef {Object} LinkCheckResult
- * @property {FileLinkResult[]} files
+ * @typedef {Object} ResultLinks
+ * @property {ResultLinksFile[]} files
  * @property {number} countBroken
  * @property {number} countChecked
  * @property {number} countSkipped
@@ -111,7 +111,7 @@ function requestSingle(url, method, timeout) {
  * Falls back from HEAD to GET on 405. Optionally warns on permanent redirects.
  * @param {string} url
  * @param {{ timeout?: number, warnOnPermanentRedirects?: boolean }} [options]
- * @returns {Promise<LinkResult>}
+ * @returns {Promise<ResultLinksUrl>}
  */
 async function checkUrl(url, { timeout = DEFAULT_LINK_TIMEOUT, warnOnPermanentRedirects = false } = {}) {
   let currentUrl = url;
@@ -220,7 +220,7 @@ function isIgnored(url, { hostnames, prefixes }) {
  *   onProgress?: () => void,
  *   onStart?: (total: number) => void,
  * }} [options]
- * @returns {Promise<LinkCheckResult>}
+ * @returns {Promise<ResultLinks>}
  */
 export async function checkLinks(filePaths, {
   concurrency = DEFAULT_LINK_CONCURRENCY,
@@ -262,7 +262,7 @@ export async function checkLinks(filePaths, {
 
   onStart?.(toCheck.size);
 
-  /** @type {Map<string, LinkResult>} */
+  /** @type {Map<string, ResultLinksUrl>} */
   const urlResults = new Map();
 
   for (const url of toSkip) {
@@ -276,11 +276,11 @@ export async function checkLinks(filePaths, {
 
   const files = filePaths.map(filePath => {
     const data = fileData.get(filePath) ?? { urls: [], error: 'Unknown error' };
-    if (data.error) return /** @type {FileLinkResult} */ ({ path: filePath, links: [], countBroken: 0, error: data.error });
+    if (data.error) return /** @type {ResultLinksFile} */ ({ path: filePath, links: [], countBroken: 0, error: data.error });
 
-    const links = data.urls.map(url => /** @type {LinkResult} */ ({ ...urlResults.get(url), url }));
+    const links = data.urls.map(url => /** @type {ResultLinksUrl} */ ({ ...urlResults.get(url), url }));
     const countBroken = links.filter(l => !l.ok).length;
-    return /** @type {FileLinkResult} */ ({ path: filePath, links, countBroken });
+    return /** @type {ResultLinksFile} */ ({ path: filePath, links, countBroken });
   });
 
   const countBroken = [...urlResults.values()].filter(r => !r.ok).length;
@@ -302,7 +302,7 @@ const SYNTHETIC_PATH = '(string input)';
  *   onProgress?: () => void,
  *   onStart?: (total: number) => void,
  * }} [options]
- * @returns {Promise<LinkCheckResult>}
+ * @returns {Promise<ResultLinks>}
  */
 export async function checkLinksString(content, options = {}) {
   return checkLinks([SYNTHETIC_PATH], { ...options, contents: new Map([[SYNTHETIC_PATH, content]]) });

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
 
 /**
- * @typedef {Object} FileMinificationResult
+ * @typedef {Object} ResultMinificationFile
  * @property {string} path
  * @property {number} sizeOriginal
  * @property {number} sizeMinified
@@ -11,8 +11,8 @@ import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
  */
 
 /**
- * @typedef {Object} MinificationResult
- * @property {FileMinificationResult[]} files
+ * @typedef {Object} ResultMinification
+ * @property {ResultMinificationFile[]} files
  * @property {number} saved
  */
 
@@ -65,7 +65,7 @@ export async function minifyString(content, { preset = 'comprehensive', options 
  * @param {string[]} filePaths - Input file paths
  * @param {string[]} outputPaths - Output file paths (parallel to filePaths; same value = in-place)
  * @param {{ preset?: string, options?: Record<string, unknown>, concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [opts]
- * @returns {Promise<MinificationResult>}
+ * @returns {Promise<ResultMinification>}
  */
 export async function minify(filePaths, outputPaths, { preset = 'comprehensive', options = {}, concurrency = DEFAULT_CONCURRENCY, contents, onProgress } = {}) {
   const { htmlMinify, resolvedOptions } = await loadMinifier(preset, options);
@@ -85,7 +85,7 @@ export async function minify(filePaths, outputPaths, { preset = 'comprehensive',
         content = await fs.promises.readFile(filePath, 'utf8');
       } catch (err) {
         onProgress?.();
-        return /** @type {FileMinificationResult} */ ({ path: filePath, sizeOriginal: 0, sizeMinified: 0, error: err instanceof Error ? err.message : String(err) });
+        return /** @type {ResultMinificationFile} */ ({ path: filePath, sizeOriginal: 0, sizeMinified: 0, error: err instanceof Error ? err.message : String(err) });
       }
     }
 
@@ -96,7 +96,7 @@ export async function minify(filePaths, outputPaths, { preset = 'comprehensive',
       minified = await htmlMinify(content, resolvedOptions);
     } catch (err) {
       onProgress?.();
-      return /** @type {FileMinificationResult} */ ({ path: filePath, sizeOriginal, sizeMinified: 0, error: `Minification error: ${err instanceof Error ? err.message : String(err)}` });
+      return /** @type {ResultMinificationFile} */ ({ path: filePath, sizeOriginal, sizeMinified: 0, error: `Minification error: ${err instanceof Error ? err.message : String(err)}` });
     }
 
     const sizeMinified = Buffer.byteLength(minified, 'utf8');
@@ -106,11 +106,11 @@ export async function minify(filePaths, outputPaths, { preset = 'comprehensive',
       await fs.promises.writeFile(outputPath, minified, 'utf8');
     } catch (err) {
       onProgress?.();
-      return /** @type {FileMinificationResult} */ ({ path: filePath, sizeOriginal, sizeMinified, error: `Write error: ${err instanceof Error ? err.message : String(err)}` });
+      return /** @type {ResultMinificationFile} */ ({ path: filePath, sizeOriginal, sizeMinified, error: `Write error: ${err instanceof Error ? err.message : String(err)}` });
     }
 
     onProgress?.();
-    return /** @type {FileMinificationResult} */ ({ path: filePath, sizeOriginal, sizeMinified });
+    return /** @type {ResultMinificationFile} */ ({ path: filePath, sizeOriginal, sizeMinified });
   });
 
   const saved = files.reduce((acc, f) => f.error ? acc : acc + Math.max(0, (f.sizeOriginal || 0) - (f.sizeMinified || 0)), 0);

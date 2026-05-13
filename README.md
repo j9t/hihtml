@@ -131,14 +131,14 @@ Recursively collects HTML files from `dir`. Returns `Promise<string[]>`.
 
 #### `checkCode(filePaths, options?)`
 
-Validates HTML files and checks for deprecated markup. Returns `Promise<CheckResult>` with `validation` (HTML-validate result) and `deprecation` (ObsoHTML result) properties.
+Validates HTML files and checks for deprecated markup. Returns `Promise<ResultCode>` with `validation` (HTML-validate result) and `deprecation` (ObsoHTML result) properties.
 
 * `options.preset`: HTML-validate preset name (default: `'standard'`)
 * `options.ignore`: List of [HTML-validate rule IDs](https://html-validate.org/rules/index.html) to suppress (default: `[]`)
 
 #### `checkCodeString(content, options?)`
 
-Validates an HTML string and checks for deprecated markup. Returns `Promise<CheckResult>`—same shape as `checkCode`. Useful in content-pipeline contexts (Eleventy transforms, middleware, SSR) where HTML is available as a string rather than a file.
+Validates an HTML string and checks for deprecated markup. Returns `Promise<ResultCode>`—same shape as `checkCode`. Useful in content-pipeline contexts (Eleventy transforms, middleware, SSR) where HTML is available as a string rather than a file.
 
 * `options.preset`: HTML-validate preset name (default: `'standard'`)
 * `options.ignore`: List of HTML-validate rule IDs to suppress (default: `[]`)
@@ -147,7 +147,7 @@ Note: `result.validation.files[0].path` and `result.deprecation.files[0].path` w
 
 #### `checkLinks(filePaths, options?)`
 
-Checks all external http/https URLs (`href`, `src`, `srcset`, `action` attributes) found in the given HTML files. Each unique URL is checked once; results are mapped back to every file it appears in. Returns `Promise<LinkCheckResult>`.
+Checks all external http/https URLs (`href`, `src`, `srcset`, `action` attributes) found in the given HTML files. Each unique URL is checked once; results are mapped back to every file it appears in. Returns `Promise<ResultLinks>`.
 
 * `options.timeout`: Request timeout in milliseconds (default: `10000`)
 * `options.concurrency`: Maximum concurrent requests (default: `8`)
@@ -160,7 +160,7 @@ Links are checked via HEAD request, falling back to GET on 405. 4xx and 5xx resp
 
 #### `checkLinksString(content, options?)`
 
-Checks all external http/https URLs found in an HTML string. Returns `Promise<LinkCheckResult>`—same shape as `checkLinks`. Useful when HTML is available as a string rather than a file, e.g., to check links in a fetched document or API response.
+Checks all external http/https URLs found in an HTML string. Returns `Promise<ResultLinks>`—same shape as `checkLinks`. Useful when HTML is available as a string rather than a file, e.g., to check links in a fetched document or API response.
 
 * `options.timeout`: Request timeout in milliseconds (default: `10000`)
 * `options.concurrency`: Maximum concurrent requests (default: `8`)
@@ -173,7 +173,7 @@ Note: `result.files[0].path` will be `'(string input)'`, not a real file path. `
 
 #### `minify(filePaths, outputPaths, options?)`
 
-Minifies HTML files using HTML Minifier Next. Returns `Promise<MinificationResult>`.
+Minifies HTML files using HTML Minifier Next. Returns `Promise<ResultMinification>`.
 
 * `outputPaths`: Parallel array of output paths; pass the same value as `filePaths` for in-place minification
 * `options.preset`: HTML Minifier Next preset name (default: `'comprehensive'`)

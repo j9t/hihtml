@@ -5,7 +5,7 @@ import { validate } from './validate.js';
 import { read } from '../lib/files.js';
 
 /**
- * @typedef {Object} FileDeprecationResult
+ * @typedef {Object} ResultCodeDeprecationFile
  * @property {string} path
  * @property {string[]} elements
  * @property {string[]} attributes
@@ -13,21 +13,21 @@ import { read } from '../lib/files.js';
  */
 
 /**
- * @typedef {Object} DeprecationResult
- * @property {FileDeprecationResult[]} files
+ * @typedef {Object} ResultCodeDeprecation
+ * @property {ResultCodeDeprecationFile[]} files
  * @property {number} countIssues
  */
 
 /**
- * @typedef {Object} CheckResult
- * @property {import('./validate.js').ValidationResult} validation
- * @property {DeprecationResult} deprecation
+ * @typedef {Object} ResultCode
+ * @property {import('./validate.js').ResultCodeValidation} validation
+ * @property {ResultCodeDeprecation} deprecation
  */
 
 /**
  * @param {string[]} filePaths
  * @param {{ concurrency?: number, contents?: Map<string, string> }} [options]
- * @returns {Promise<DeprecationResult>}
+ * @returns {Promise<ResultCodeDeprecation>}
  */
 async function checkDeprecated(filePaths, { concurrency = DEFAULT_CONCURRENCY, contents } = {}) {
   const files = await runWithConcurrency(filePaths, concurrency, async (filePath) => {
@@ -37,7 +37,7 @@ async function checkDeprecated(filePaths, { concurrency = DEFAULT_CONCURRENCY, c
       try {
         content = await fs.promises.readFile(filePath, 'utf8');
       } catch (err) {
-        return /** @type {FileDeprecationResult} */ ({ path: filePath, elements: [], attributes: [], error: err instanceof Error ? err.message : String(err) });
+        return /** @type {ResultCodeDeprecationFile} */ ({ path: filePath, elements: [], attributes: [], error: err instanceof Error ? err.message : String(err) });
       }
     }
 
@@ -48,7 +48,7 @@ async function checkDeprecated(filePaths, { concurrency = DEFAULT_CONCURRENCY, c
       throw new Error(`ObsoHTML API error—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
     }
 
-    return /** @type {FileDeprecationResult} */ ({ path: filePath, elements: result.elements, attributes: result.attributes });
+    return /** @type {ResultCodeDeprecationFile} */ ({ path: filePath, elements: result.elements, attributes: result.attributes });
   });
 
   const countIssues = files.reduce((acc, f) => acc + f.elements.length + f.attributes.length, 0);
@@ -59,7 +59,7 @@ async function checkDeprecated(filePaths, { concurrency = DEFAULT_CONCURRENCY, c
  * Validate HTML files and check for deprecated markup.
  * @param {string[]} filePaths
  * @param {{ preset?: string, ignore?: string[], concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [options]
- * @returns {Promise<CheckResult>}
+ * @returns {Promise<ResultCode>}
  */
 export async function checkCode(filePaths, { preset = 'standard', ignore = [], concurrency = DEFAULT_CONCURRENCY, contents, onProgress } = {}) {
   const resolvedContents = contents ?? await read(filePaths, { concurrency });
@@ -76,7 +76,7 @@ const SYNTHETIC_PATH = '(string input)';
  * Validate an HTML string and check for deprecated markup.
  * @param {string} content
  * @param {{ preset?: string, ignore?: string[] }} [options]
- * @returns {Promise<CheckResult>}
+ * @returns {Promise<ResultCode>}
  */
 export async function checkCodeString(content, { preset = 'standard', ignore = [] } = {}) {
   return checkCode([SYNTHETIC_PATH], { preset, ignore, contents: new Map([[SYNTHETIC_PATH, content]]) });

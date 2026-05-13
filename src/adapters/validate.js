@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
 
 /**
- * @typedef {Object} ValidationMessage
+ * @typedef {Object} MessageValidation
  * @property {string} ruleId
  * @property {1|2} severity - 1 = warning, 2 = error
  * @property {string} message
@@ -12,14 +12,14 @@ import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
  */
 
 /**
- * @typedef {Object} FileValidationResult
+ * @typedef {Object} ResultCodeValidationFile
  * @property {string} path
- * @property {ValidationMessage[]} messages
+ * @property {MessageValidation[]} messages
  */
 
 /**
- * @typedef {Object} ValidationResult
- * @property {FileValidationResult[]} files
+ * @typedef {Object} ResultCodeValidation
+ * @property {ResultCodeValidationFile[]} files
  * @property {number} countErrors
  * @property {number} countWarnings
  * @property {number} countIgnored
@@ -67,7 +67,7 @@ function getValidator(preset) {
  * Validate HTML files using HTML-validate.
  * @param {string[]} filePaths
  * @param {{ preset?: string, ignore?: string[], concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [options]
- * @returns {Promise<ValidationResult>}
+ * @returns {Promise<ResultCodeValidation>}
  */
 export async function validate(filePaths, { preset = 'standard', ignore = [], concurrency = DEFAULT_CONCURRENCY, contents, onProgress } = {}) {
   const ignoreSet = new Set(Array.isArray(ignore) ? ignore.map(String) : []);
@@ -81,7 +81,7 @@ export async function validate(filePaths, { preset = 'standard', ignore = [], co
         content = await fs.promises.readFile(filePath, 'utf8');
       } catch (err) {
         onProgress?.();
-        return /** @type {FileValidationResult} */ ({ path: filePath, messages: [{ ruleId: 'io-error', severity: /** @type {2} */ (2), message: err instanceof Error ? err.message : String(err), line: 0, col: 0 }] });
+        return /** @type {ResultCodeValidationFile} */ ({ path: filePath, messages: [{ ruleId: 'io-error', severity: /** @type {2} */ (2), message: err instanceof Error ? err.message : String(err), line: 0, col: 0 }] });
       }
     }
 
@@ -93,7 +93,7 @@ export async function validate(filePaths, { preset = 'standard', ignore = [], co
     }
 
     const raw = report?.results?.[0]?.messages ?? [];
-    /** @type {ValidationMessage[]} */
+    /** @type {MessageValidation[]} */
     const messages = raw.map(m => {
       const ruleId = String(m.ruleId ?? 'unknown');
       return {
@@ -107,7 +107,7 @@ export async function validate(filePaths, { preset = 'standard', ignore = [], co
     });
 
     onProgress?.();
-    return /** @type {FileValidationResult} */ ({ path: filePath, messages });
+    return /** @type {ResultCodeValidationFile} */ ({ path: filePath, messages });
   });
 
   const countErrors = files.reduce((acc, f) => acc + f.messages.filter(m => m.severity === 2 && !m.ignored).length, 0);

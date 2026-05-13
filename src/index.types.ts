@@ -1,11 +1,11 @@
 import type {
-  ValidationResult,
-  DeprecationResult,
-  CheckResult,
-  LinkResult,
-  FileLinkResult,
-  LinkCheckResult,
-  MinificationResult,
+  ResultCodeValidation,
+  ResultCodeDeprecation,
+  ResultCode,
+  ResultLinksUrl,
+  ResultLinksFile,
+  ResultLinks,
+  ResultMinification,
   HihtmlConfig,
 } from './index.js';
 
@@ -24,13 +24,13 @@ import {
 } from './index.js';
 
 export type {
-  ValidationResult,
-  DeprecationResult,
-  CheckResult,
-  LinkResult,
-  FileLinkResult,
-  LinkCheckResult,
-  MinificationResult,
+  ResultCodeValidation,
+  ResultCodeDeprecation,
+  ResultCode,
+  ResultLinksUrl,
+  ResultLinksFile,
+  ResultLinks,
+  ResultMinification,
   HihtmlConfig,
 };
 
