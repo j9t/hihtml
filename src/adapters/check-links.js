@@ -194,12 +194,15 @@ function buildIgnoreList(ignore) {
  */
 function isIgnored(url, { hostnames, prefixes }) {
   if (hostnames.size === 0 && prefixes.length === 0) return false;
-  const urlLower = url.toLowerCase();
+  let parsed;
+  try { parsed = new URL(url); } catch { return false; }
   for (const prefix of prefixes) {
-    if (urlLower.startsWith(prefix)) return true;
+    const target = prefix.startsWith('/')
+      ? parsed.pathname.toLowerCase()
+      : (parsed.origin + parsed.pathname).toLowerCase();
+    if (target === prefix || target.startsWith(prefix + '/')) return true;
   }
-  let hostname;
-  try { hostname = new URL(url).hostname; } catch { return false; }
+  const { hostname } = parsed;
   if (hostnames.has(hostname)) return true;
   for (const h of hostnames) {
     if (hostname.endsWith(`.${h}`)) return true;
