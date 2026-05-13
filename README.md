@@ -153,6 +153,8 @@ Checks all external http/https URLs (`href`, `src`, `srcset`, `action` attribute
 * `options.concurrency`: Maximum concurrent requests (default: `8`)
 * `options.warnOnPermanentRedirects`: Warn on 301/308 permanent redirects (default: `false`)
 * `options.ignore`: List of hostnames or URL prefixes to skip (default: `[]`)
+* `options.onStart`: Called once with the total number of URLs to check
+* `options.onProgress`: Called after each URL is checked
 
 Links are checked via HEAD request, falling back to GET on 405. 4xx and 5xx responses are reported as broken. Skipped URLs (from the ignore list) appear in results with `skipped: true` and are never counted as broken.
 
@@ -164,8 +166,8 @@ Checks all external http/https URLs found in an HTML string. Returns `Promise<Li
 * `options.concurrency`: Maximum concurrent requests (default: `8`)
 * `options.warnOnPermanentRedirects`: Warn on 301/308 permanent redirects (default: `false`)
 * `options.ignore`: List of hostnames or URL prefixes to skip (default: `[]`)
-* `options.onProgress`: Called after each URL is checked
 * `options.onStart`: Called once with the total number of URLs to check
+* `options.onProgress`: Called after each URL is checked
 
 Note: `result.files[0].path` will be `'(string input)'`, not a real file path. `result.countFileErrors` will always be `0`.
 
