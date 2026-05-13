@@ -96,7 +96,10 @@ export function formatLinkCheckResult(result, quiet = false) {
   const withIssues = result.files.filter(f =>
     f.error || f.links.some(l => !l.ok || l.skipped || l.warning === 'permanent-redirect')
   );
-  const cleanCount = result.files.length - withIssues.length;
+  const countIssues = withIssues.filter(f =>
+    f.error || f.links.some(l => !l.ok || l.warning === 'permanent-redirect')
+  ).length;
+  const countClean = result.files.length - withIssues.length;
 
   const hasRealIssues = result.countBroken > 0 || result.countFileErrors > 0
     || result.files.some(f => f.links.some(l => l.warning === 'permanent-redirect'));
@@ -151,8 +154,8 @@ export function formatLinkCheckResult(result, quiet = false) {
     ? `, ${s.error(`${result.countFileErrors} file ${result.countFileErrors === 1 ? 'error' : 'errors'}`)}`
     : '';
   const fileParts = [];
-  if (withIssues.length > 0) fileParts.push(s.warning(`${withIssues.length} with issues`));
-  if (cleanCount > 0) fileParts.push(s.success(`${cleanCount} clean`));
+  if (countIssues > 0) fileParts.push(s.warning(`${countIssues} with issues`));
+  if (countClean > 0) fileParts.push(s.success(`${countClean} clean`));
   const summaryBroken = result.countBroken === 0 && result.countFileErrors === 0
     ? s.success('no broken links')
     : s.warning(`${result.countBroken} broken ${result.countBroken === 1 ? 'link' : 'links'}`);
