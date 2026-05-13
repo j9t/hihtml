@@ -1,0 +1,53 @@
+{
+  "author": "Jens Oliver Meiert",
+  "bin": {
+    "hihtml": "bin/hihtml.js"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "html-minifier-next": "^6.2.4",
+    "html-validate": "^10.16.0",
+    "obsohtml": "^1.10.1"
+  },
+  "description": "The HTML supertool to validate, link-check, and minify web pages",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.6.2",
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
+    "typescript": "^6.0.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "funding": "https://github.com/j9t/hihtml?sponsor=1",
+  "homepage": "https://github.com/j9t/hihtml",
+  "keywords": [
+    "html",
+    "minify",
+    "minification",
+    "validate",
+    "validation",
+    "qa",
+    "qc"
+  ],
+  "license": "MIT",
+  "name": "hihtml",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/j9t/hihtml.git"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "prepare": "git config core.hooksPath .githooks || true",
+    "start": "node ./bin/hihtml.js",
+    "test": "npm run test:types && node --test bin/hihtml.test.js",
+    "test:types": "tsc"
+  },
+  "type": "module",
+  "types": "src/index.d.ts",
+  "version": "1.2.0-beta"
+}

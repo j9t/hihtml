@@ -1,0 +1,9 @@
+.claude/
+.githooks/
+.github/
+bin/hihtml.test.js
+src/index.types.ts
+.gitignore
+.nvmrc
+eslint.config.js
+tsconfig.json
