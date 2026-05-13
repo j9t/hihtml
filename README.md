@@ -1,8 +1,8 @@
-# HiHTML, the HTML Processing Supertool (Beta)
+# hihtml, the HTML Processing Supertool (Beta)
 
 [![npm version](https://img.shields.io/npm/v/hihtml.svg)](https://www.npmjs.com/package/hihtml) [![Build status](https://github.com/j9t/hihtml/workflows/Tests/badge.svg)](https://github.com/j9t/hihtml/actions) [![Socket](https://badge.socket.dev/npm/package/hihtml)](https://socket.dev/npm/package/hihtml) [![GitHub Sponsors](https://badgen.net/static/Support/Open%20Source/cyan)](https://github.com/j9t/hihtml?sponsor=1)
 
-HiHTML—“High Quality HTML”—bundles key HTML tools into one, making HTML validation and semantics control, link checking, and minification as easy as it gets: [HTML-validate](https://html-validate.org/) for validation, [ObsoHTML](https://github.com/j9t/obsohtml) for deprecated markup detection, Node’s built-in `http`/`https` for link checking, and [HTML Minifier Next](https://github.com/j9t/html-minifier-next) for minification. HiHTML provides a CLI and a programmatic API, and comes with strong defaults but is still highly configurable.
+hihtml—“high-quality HTML”—bundles several key HTML tools into one, making HTML validation and semantics control, link checking, and minification as easy as it gets: [HTML-validate](https://html-validate.org/) for validation, [ObsoHTML](https://github.com/j9t/obsohtml) for deprecated markup detection, Node’s built-in `http`/`https` for link checking, and [HTML Minifier Next](https://github.com/j9t/html-minifier-next) for minification. hihtml provides a CLI and a programmatic API, and comes with strong defaults but is still highly configurable.
 
 ## Usage
 
@@ -14,11 +14,11 @@ HiHTML—“High Quality HTML”—bundles key HTML tools into one, making HTML 
 npm i hihtml
 ```
 
-Recommended: Just run HiHTML via `npx hihtml`.
+Recommended: Just run hihtml via `npx hihtml`.
 
 #### Execution
 
-Without options, HiHTML validates HTML files and checks for deprecated markup in the current directory. Use flags to control behavior:
+Without options, hihtml validates HTML files and checks for deprecated markup in the current directory. Use flags to control behavior:
 
 | Flag | Description |
 |---|---|
@@ -188,11 +188,11 @@ Minifies an HTML string using HTML Minifier Next. Returns `Promise<string>`. Use
 
 #### `loadConfig(cwd?, filePath?)`
 
-Loads HiHTML configuration. When `filePath` is given, only that file is read (no CWD fallback); if it contains a `"hihtml"` key that value is used, otherwise the root object is used. Without `filePath`, reads `.hihtml.json` or the `"hihtml"` key in `package.json` from `cwd`. Returns `Promise<HiHTMLConfig>`.
+Loads hihtml configuration. When `filePath` is given, only that file is read (no CWD fallback); if it contains a `"hihtml"` key that value is used, otherwise the root object is used. Without `filePath`, reads `.hihtml.json` or the `"hihtml"` key in `package.json` from `cwd`. Returns `Promise<HihtmlConfig>`.
 
 ## Configuration
 
-Create a .hihtml.json file in your project root, or add a `"hihtml"` key to package.json. Both use the same format (here showing HiHTML’s defaults):
+Create a .hihtml.json file in your project root, or add a `"hihtml"` key to package.json. Both use the same format (here showing hihtml’s defaults):
 
 ```json
 {
@@ -236,12 +236,12 @@ If in doubt or in a hurry, [report issues here](https://github.com/j9t/hihtml/is
 
 ### What does ObsoHTML do here when HTML-validate already reports on deprecated markup?
 
-At the moment, ObsoHTML catches some elements and attributes that HTML-validate doesn’t. Once HTML-validate covers everything ObsoHTML covers, ObsoHTML is going to be removed from HiHTML. Note that ObsoHTML is purely informational—it doesn’t prevent minification when used with the `--all`/`-a` flag.
+At the moment, ObsoHTML catches some elements and attributes that HTML-validate doesn’t. Once HTML-validate covers everything ObsoHTML covers, ObsoHTML is going to be removed from hihtml. Note that ObsoHTML is purely informational—it doesn’t prevent minification when used with the `--all`/`-a` flag.
 
 ***
 
 You might like some of my other work:
 
-* Optimization tools: HiHTML (including [HTML Minifier Next](https://github.com/j9t/html-minifier-next) + [ObsoHTML](https://github.com/j9t/obsohtml)) · [Image Guard](https://github.com/j9t/image-guard) · [Compressor.js Next](https://github.com/j9t/compressorjs-next) · [.htaccess Punk](https://github.com/j9t/htaccess-punk)
+* Optimization tools: hihtml (including [HTML Minifier Next](https://github.com/j9t/html-minifier-next) + [ObsoHTML](https://github.com/j9t/obsohtml)) · [Image Guard](https://github.com/j9t/image-guard) · [Compressor.js Next](https://github.com/j9t/compressorjs-next) · [.htaccess Punk](https://github.com/j9t/htaccess-punk)
 * Defense tools: [IA Defensa](https://iadefensa.com/solutions/)
 * Resources for quality web development: [Articles](https://meiert.com/topics/development/) · [Books](https://meiert.com/topics/books/) (including [_On Web Development_](https://meiert.com/blog/on-web-development-2/)) · [News](https://frontenddogma.com/) · [Terminology](https://webglossary.info/)

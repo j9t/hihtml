@@ -6,7 +6,7 @@ import type {
   FileLinkResult,
   LinkCheckResult,
   MinificationResult,
-  HiHTMLConfig,
+  HihtmlConfig,
 } from './index.js';
 
 import {
@@ -31,7 +31,7 @@ export type {
   FileLinkResult,
   LinkCheckResult,
   MinificationResult,
-  HiHTMLConfig,
+  HihtmlConfig,
 };
 
 export {

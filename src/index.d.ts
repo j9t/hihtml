@@ -76,7 +76,7 @@ export interface MinificationResult {
   saved: number;
 }
 
-export interface HiHTMLConfig {
+export interface HihtmlConfig {
   extensions?: string[];
   ignore?: string[];
   validation?: { preset?: string; ignore?: string[] };
@@ -100,7 +100,7 @@ export declare function read(
   options?: { concurrency?: number; onProgress?: () => void }
 ): Promise<Map<string, string>>;
 
-export declare function loadConfig(cwd?: string, filePath?: string): Promise<HiHTMLConfig>;
+export declare function loadConfig(cwd?: string, filePath?: string): Promise<HihtmlConfig>;
 
 export declare function checkCode(
   filePaths: string[],

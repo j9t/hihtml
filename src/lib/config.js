@@ -4,7 +4,7 @@ import path from 'node:path';
 const CONFIG_FILE = '.hihtml.json';
 
 /**
- * @typedef {Object} HiHTMLConfig
+ * @typedef {Object} HihtmlConfig
  * @property {string[]} [extensions]
  * @property {string[]} [ignore]
  * @property {{ preset?: string, ignore?: string[] }} [validation]
@@ -18,7 +18,7 @@ const CONFIG_FILE = '.hihtml.json';
  * If the file contains a `"hihtml"` key, that key’s value is used; otherwise the root object is used.
  * @param {string} [cwd]
  * @param {string} [filePath]
- * @returns {Promise<HiHTMLConfig>}
+ * @returns {Promise<HihtmlConfig>}
  */
 export async function loadConfig(cwd = process.cwd(), filePath = undefined) {
   if (filePath !== undefined) {
