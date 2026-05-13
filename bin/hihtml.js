@@ -139,7 +139,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
         if (!numbered) { console.log('\n' + out); return; }
         const num = `${i + 1}. `;
         const withTitle = num + out;
-        const withSummary = withTitle.replace(/(\n {2})([^\n]+)$/, `$1${num}$2`);
+        const withSummary = withTitle.replace(/\n(\n {2})([^\n]+)$/, `\n$1${num}$2`);
         console.log('\n' + withSummary);
       });
     };
