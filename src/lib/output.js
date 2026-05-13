@@ -51,8 +51,12 @@ export function formatValidationResult(result, quiet = false) {
     }
   }
 
-  if (!quiet && cleanCount > 0) {
-    lines.push(`  ${s.success(`${cleanCount} ${cleanCount === 1 ? 'file' : 'files'}: no issues`)}`);
+  if (!quiet && result.files.length > 0) {
+    const total = result.files.length;
+    const parts = [];
+    if (withIssues.length > 0) parts.push(s.warning(`${withIssues.length} with issues`));
+    if (cleanCount > 0) parts.push(s.success(`${cleanCount} clean`));
+    lines.push(`\n  ${total} ${total === 1 ? 'file' : 'files'} checked · ${parts.join(', ')}`);
   }
 
   return lines.join('\n');
@@ -84,8 +88,12 @@ export function formatDeprecationResult(result, quiet = false) {
     }
   }
 
-  if (!quiet && cleanCount > 0) {
-    lines.push(`  ${s.success(`${cleanCount} ${cleanCount === 1 ? 'file' : 'files'}: no issues`)}`);
+  if (!quiet && result.files.length > 0) {
+    const total = result.files.length;
+    const parts = [];
+    if (withIssues.length > 0) parts.push(s.warning(`${withIssues.length} with issues`));
+    if (cleanCount > 0) parts.push(s.success(`${cleanCount} clean`));
+    lines.push(`\n  ${total} ${total === 1 ? 'file' : 'files'} checked · ${parts.join(', ')}`);
   }
 
   return lines.join('\n');
@@ -160,7 +168,7 @@ export function formatLinkCheckResult(result, quiet = false) {
     : '';
   const summaryBroken = result.countBroken === 0 && result.countFileErrors === 0
     ? s.success('no broken links')
-    : s.warning(`${result.countBroken} broken`);
+    : s.warning(`${result.countBroken} broken ${result.countBroken === 1 ? 'link' : 'links'}`);
 
   lines.push(`\n  ${result.files.length} ${result.files.length === 1 ? 'file' : 'files'} · ${summaryCount}${summarySkipped}${summaryFileErrors} · ${summaryBroken}`);
 
