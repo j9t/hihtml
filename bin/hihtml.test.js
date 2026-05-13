@@ -391,16 +391,6 @@ describe('CLI `--all`', () => {
 
     fs.rmSync(ignoreDir, { recursive: true, force: true });
     fs.rmSync(outDir, { recursive: true, force: true });
-
-    test('Numbers all sections', () => {
-      const outDir = path.join(tempDir, 'all_numbered_out');
-      const { stdout } = run(['-a', '-i', path.join(tempDir, 'clean.html'), '-o', outDir]);
-      assert.ok(stdout.includes('1. '));
-      assert.ok(stdout.includes('2. '));
-      assert.ok(stdout.includes('3. '));
-      assert.ok(stdout.includes('4. '));
-      fs.rmSync(outDir, { recursive: true, force: true });
-    });
   });
 
   test('Runs check and minify and exits “0” when only deprecated markup is found (no validation errors)', () => {
@@ -415,6 +405,16 @@ describe('CLI `--all`', () => {
     assert.ok(stdout.includes('Minification'));
     assert.ok(fs.existsSync(path.join(outDir, 'page.html')));
     fs.rmSync(srcDir, { recursive: true, force: true });
+    fs.rmSync(outDir, { recursive: true, force: true });
+  });
+
+  test('Numbers all sections', () => {
+    const outDir = path.join(tempDir, 'all_numbered_out');
+    const { stdout } = run(['-a', '-i', path.join(tempDir, 'clean.html'), '-o', outDir]);
+    assert.ok(stdout.includes('1. '));
+    assert.ok(stdout.includes('2. '));
+    assert.ok(stdout.includes('3. '));
+    assert.ok(stdout.includes('4. '));
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 });
