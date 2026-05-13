@@ -33,9 +33,9 @@ function run(args, stdinInput = '', cwd = undefined) {
 
 // Fixtures
 
-const HTML_CLEAN = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p>Hello.</p></body></html>';
-const HTML_DEPRECATED = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><center>Old</center></body></html>';
-const HTML_INVALID = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p><div>Bad nesting.</div></p></body></html>';
+const HTML_CLEAN = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p>Yes</p></body></html>';
+const HTML_DEPRECATED = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><center>Not anymore</center></body></html>';
+const HTML_INVALID = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p><div>No</div></p></body></html>';
 
 /** @type {http.Server} */
 let testServer;
@@ -1083,7 +1083,7 @@ describe('Read files', () => {
     const result = await read([fileClean]);
     assert.ok(result instanceof Map);
     assert.ok(result.has(fileClean));
-    assert.ok(result.get(fileClean).includes('Hello'));
+    assert.ok(result.get(fileClean).includes('Yes'));
   });
 
   test('Skips unreadable files gracefully', async () => {
