@@ -25,6 +25,8 @@ import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
  * @property {number} countIgnored
  */
 
+// Intentionally unbounded: Keyed by preset name, and HTML-validate exposes a
+// fixed small set of presets, so this will never hold more than a handful of entries
 /** @type {Map<string, Promise<import('html-validate').HtmlValidate>>} */
 const validatorCache = new Map();
 
