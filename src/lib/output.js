@@ -138,10 +138,6 @@ export function formatLinkCheckResult(result, quiet = false) {
     }
   }
 
-  if (!quiet && cleanCount > 0 && (withIssues.length > 0 || result.countChecked > 0 || result.countSkipped > 0)) {
-    lines.push(`  ${s.success(`${filesCount(cleanCount)}: no issues`)}`);
-  }
-
   const total = result.countChecked;
   const summaryCount = total === 0 && result.countSkipped === 0
     ? 'no http/https links'
@@ -154,11 +150,14 @@ export function formatLinkCheckResult(result, quiet = false) {
   const summaryFileErrors = result.countFileErrors > 0
     ? `, ${s.error(`${result.countFileErrors} file ${result.countFileErrors === 1 ? 'error' : 'errors'}`)}`
     : '';
+  const fileParts = [];
+  if (withIssues.length > 0) fileParts.push(s.warning(`${withIssues.length} with issues`));
+  if (cleanCount > 0) fileParts.push(s.success(`${cleanCount} clean`));
   const summaryBroken = result.countBroken === 0 && result.countFileErrors === 0
     ? s.success('no broken links')
     : s.warning(`${result.countBroken} broken ${result.countBroken === 1 ? 'link' : 'links'}`);
 
-  lines.push(`\n  ${filesCount(result.files.length)} · ${summaryCount}${summarySkipped}${summaryFileErrors} · ${summaryBroken}`);
+  lines.push(`\n  ${filesCount(result.files.length)} · ${summaryCount}${summarySkipped}${summaryFileErrors} · ${fileParts.join(', ')} · ${summaryBroken}`);
 
   return lines.join('\n');
 }
