@@ -51,12 +51,17 @@ const RE_SRCSET = /\bsrcset\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
 function extractUrls(content) {
   const urls = new Set();
 
-  for (const m of content.matchAll(RE_ATTR)) {
+  const stripped = content
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/(<script\b[^>]*>)[\s\S]*?<\/script>/gi, '$1</script>')
+    .replace(/(<style\b[^>]*>)[\s\S]*?<\/style>/gi, '$1</style>');
+
+  for (const m of stripped.matchAll(RE_ATTR)) {
     const rawUrl = m[1] ?? m[2] ?? m[3];
     try { urls.add(new URL(rawUrl).href.split('#')[0]); } catch { /* skip malformed URLs */ }
   }
 
-  for (const m of content.matchAll(RE_SRCSET)) {
+  for (const m of stripped.matchAll(RE_SRCSET)) {
     for (const entry of (m[1] ?? m[2]).split(',')) {
       const candidate = entry.trim().split(/\s+/)[0];
       if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
@@ -174,9 +179,10 @@ async function checkUrl(url, { timeout = DEFAULT_LINK_TIMEOUT, warnOnPermanentRe
  * @returns {IgnoreList}
  */
 function buildIgnoreList(ignore) {
+  const normalized = ignore.map(e => e.trim().toLowerCase());
   return {
-    hostnames: new Set(ignore.filter(e => !e.includes('/'))),
-    prefixes: ignore.filter(e => e.includes('/')),
+    hostnames: new Set(normalized.filter(e => !e.includes('/'))),
+    prefixes: normalized.filter(e => e.includes('/')).map(e => e.replace(/\/+$/, '')),
   };
 }
 
@@ -188,8 +194,9 @@ function buildIgnoreList(ignore) {
  */
 function isIgnored(url, { hostnames, prefixes }) {
   if (hostnames.size === 0 && prefixes.length === 0) return false;
+  const urlLower = url.toLowerCase();
   for (const prefix of prefixes) {
-    if (url.startsWith(prefix)) return true;
+    if (urlLower.startsWith(prefix)) return true;
   }
   let hostname;
   try { hostname = new URL(url).hostname; } catch { return false; }

@@ -841,7 +841,7 @@ describe('Check links', () => {
     assert.strictEqual(result.countSkipped, 1);
   });
 
-  test('Ignored URLs are not counted as broken', async () => {
+  test('Does not count ignored URLs as broken', async () => {
     const result = await checkLinks([path.join(tempDir, 'links_mixed.html')], {
       ignore: ['127.0.0.1'],
     });
@@ -955,6 +955,22 @@ describe('URL extraction', () => {
 
   test('`srcset` with spaces around `=`', async () => {
     assert.deepStrictEqual(await found(`<img srcset = "${ok()} 2x">`), { checked: 1, broken: 0 });
+  });
+
+  test('Does not check URLs inside HTML comments', async () => {
+    assert.deepStrictEqual(await found(`<!-- <a href="${ok()}">ignored</a> -->`), { checked: 0, broken: 0 });
+  });
+
+  test('Does not check URLs inside `<script>` body', async () => {
+    assert.deepStrictEqual(await found(`<script>var u = "${ok()}";</script>`), { checked: 0, broken: 0 });
+  });
+
+  test('Still checks `<script src>`', async () => {
+    assert.deepStrictEqual(await found(`<script src="${ok()}"></script>`), { checked: 1, broken: 0 });
+  });
+
+  test('Does not check URLs inside `<style>` body', async () => {
+    assert.deepStrictEqual(await found(`<style>a::before { content: "${ok()}"; }</style>`), { checked: 0, broken: 0 });
   });
 });
 
