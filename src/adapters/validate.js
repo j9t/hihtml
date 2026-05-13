@@ -25,33 +25,40 @@ import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
  * @property {number} countIgnored
  */
 
-/** @type {Map<string, import('html-validate').HtmlValidate>} */
+/** @type {Map<string, Promise<import('html-validate').HtmlValidate>>} */
 const validatorCache = new Map();
 
 /**
- * Return a cached HtmlValidate instance for the given preset, creating one if needed.
+ * Return a shared promise for a cached HtmlValidate instance for the given preset.
+ * Caching the promise rather than the resolved value means concurrent callers
+ * share a single initialization rather than each racing past the cache check.
  * @param {string} preset
  * @returns {Promise<import('html-validate').HtmlValidate>}
  */
-async function getValidator(preset) {
-  if (validatorCache.has(preset)) return /** @type {import('html-validate').HtmlValidate} */ (validatorCache.get(preset));
+function getValidator(preset) {
+  if (validatorCache.has(preset)) return /** @type {Promise<import('html-validate').HtmlValidate>} */ (validatorCache.get(preset));
 
-  let HtmlValidate;
-  try {
-    ({ HtmlValidate } = await import('html-validate'));
-  } catch {
-    throw new Error('Could not load HTML-validate. Ensure it is installed and check for breaking API changes.');
-  }
+  const promise = (async () => {
+    let HtmlValidate;
+    try {
+      ({ HtmlValidate } = await import('html-validate'));
+    } catch {
+      throw new Error('Could not load HTML-validate. Ensure it is installed and check for breaking API changes.');
+    }
 
-  let validator;
-  try {
-    validator = new HtmlValidate({ extends: [`html-validate:${preset}`] });
-  } catch (err) {
-    throw new Error(`HTML-validate initialization failed—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
-  }
+    let validator;
+    try {
+      validator = new HtmlValidate({ extends: [`html-validate:${preset}`] });
+    } catch (err) {
+      throw new Error(`HTML-validate initialization failed—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+    }
 
-  validatorCache.set(preset, validator);
-  return validator;
+    return validator;
+  })();
+
+  promise.catch(() => validatorCache.delete(preset));
+  validatorCache.set(preset, promise);
+  return promise;
 }
 
 /**
