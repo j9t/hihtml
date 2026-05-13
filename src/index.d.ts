@@ -107,6 +107,11 @@ export declare function checkCode(
   options?: { preset?: string; ignore?: string[]; concurrency?: number; contents?: Map<string, string>; onProgress?: () => void }
 ): Promise<CheckResult>;
 
+export declare function checkCodeString(
+  content: string,
+  options?: { preset?: string; ignore?: string[] }
+): Promise<CheckResult>;
+
 export declare function checkLinks(
   filePaths: string[],
   options?: {
@@ -120,8 +125,25 @@ export declare function checkLinks(
   }
 ): Promise<LinkCheckResult>;
 
+export declare function checkLinksString(
+  content: string,
+  options?: {
+    concurrency?: number;
+    timeout?: number;
+    warnOnPermanentRedirects?: boolean;
+    ignore?: string[];
+    onProgress?: () => void;
+    onStart?: (total: number) => void;
+  }
+): Promise<LinkCheckResult>;
+
 export declare function minify(
   filePaths: string[],
   outputPaths: string[],
   options?: { preset?: string; options?: Record<string, unknown>; concurrency?: number; contents?: Map<string, string>; onProgress?: () => void }
 ): Promise<MinificationResult>;
+
+export declare function minifyString(
+  content: string,
+  options?: { preset?: string; options?: Record<string, unknown> }
+): Promise<string>;

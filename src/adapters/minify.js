@@ -17,13 +17,12 @@ import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
  */
 
 /**
- * Minify HTML files using HTML Minifier Next.
- * @param {string[]} filePaths - Input file paths
- * @param {string[]} outputPaths - Output file paths (parallel to filePaths; same value = in-place)
- * @param {{ preset?: string, options?: Record<string, unknown>, concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [opts]
- * @returns {Promise<MinificationResult>}
+ * Load HTML Minifier Next and resolve preset and extra options into a merged options object.
+ * @param {string} preset
+ * @param {Record<string, unknown>} options
+ * @returns {Promise<{ htmlMinify: Function, resolvedOptions: Record<string, unknown> }>}
  */
-export async function minify(filePaths, outputPaths, { preset = 'comprehensive', options = {}, concurrency = DEFAULT_CONCURRENCY, contents, onProgress } = {}) {
+async function loadMinifier(preset, options) {
   let htmlMinify, getPreset;
   try {
     ({ minify: htmlMinify, getPreset } = await import('html-minifier-next'));
@@ -38,7 +37,29 @@ export async function minify(filePaths, outputPaths, { preset = 'comprehensive',
     throw new Error(`HTML Minifier Next API error—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
   }
 
-  const resolvedOptions = { ...presetOptions, ...options };
+  return { htmlMinify, resolvedOptions: { ...presetOptions, ...options } };
+}
+
+/**
+ * Minify an HTML string using HTML Minifier Next.
+ * @param {string} content
+ * @param {{ preset?: string, options?: Record<string, unknown> }} [opts]
+ * @returns {Promise<string>}
+ */
+export async function minifyString(content, { preset = 'comprehensive', options = {} } = {}) {
+  const { htmlMinify, resolvedOptions } = await loadMinifier(preset, options);
+  return htmlMinify(content, resolvedOptions);
+}
+
+/**
+ * Minify HTML files using HTML Minifier Next.
+ * @param {string[]} filePaths - Input file paths
+ * @param {string[]} outputPaths - Output file paths (parallel to filePaths; same value = in-place)
+ * @param {{ preset?: string, options?: Record<string, unknown>, concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [opts]
+ * @returns {Promise<MinificationResult>}
+ */
+export async function minify(filePaths, outputPaths, { preset = 'comprehensive', options = {}, concurrency = DEFAULT_CONCURRENCY, contents, onProgress } = {}) {
+  const { htmlMinify, resolvedOptions } = await loadMinifier(preset, options);
 
   if (outputPaths.length !== filePaths.length) {
     throw new Error(`outputPaths length (${outputPaths.length}) must match filePaths length (${filePaths.length})`);

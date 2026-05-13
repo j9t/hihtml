@@ -103,7 +103,7 @@ npx hihtml -q -a -i src -o dist
 ### 2. Programmatic API
 
 ```js
-import { checkCode, checkLinks, minify, collect } from 'hihtml';
+import { checkCode, checkCodeString, checkLinks, checkLinksString, minify, minifyString, collect } from 'hihtml';
 
 const files = await collect('./src');
 
@@ -115,6 +115,11 @@ const links = await checkLinks(files);
 
 const minification = await minify(files, files); // in-place
 // { files: [{ path, sizeOriginal, sizeMinified }], saved }
+
+// String variants—same result types, no file I/O
+const minified = await minifyString('<p>Hello  world</p>');
+const codeGate = await checkCodeString('<p><div>Nope</div></p>');
+const linksCleaned = await checkLinksString('<a href="https://example.com/">Example</a>');
 ```
 
 #### `collect(dir, extensions?, excludedDirs?)`
@@ -131,6 +136,15 @@ Validates HTML files and checks for deprecated markup. Returns `Promise<CheckRes
 * `options.preset`: HTML-validate preset name (default: `'standard'`)
 * `options.ignore`: List of [HTML-validate rule IDs](https://html-validate.org/rules/index.html) to suppress (default: `[]`)
 
+#### `checkCodeString(content, options?)`
+
+Validates an HTML string and checks for deprecated markup. Returns `Promise<CheckResult>`—same shape as `checkCode`. Useful in content-pipeline contexts (Eleventy transforms, middleware, SSR) where HTML is available as a string rather than a file.
+
+* `options.preset`: HTML-validate preset name (default: `'standard'`)
+* `options.ignore`: List of HTML-validate rule IDs to suppress (default: `[]`)
+
+Note: `result.validation.files[0].path` and `result.deprecation.files[0].path` will be `'(string input)'`, not a real file path.
+
 #### `checkLinks(filePaths, options?)`
 
 Checks all external http/https URLs (`href`, `src`, `srcset`, `action` attributes) found in the given HTML files. Each unique URL is checked once; results are mapped back to every file it appears in. Returns `Promise<LinkCheckResult>`.
@@ -142,11 +156,31 @@ Checks all external http/https URLs (`href`, `src`, `srcset`, `action` attribute
 
 Links are checked via HEAD request, falling back to GET on 405. 4xx and 5xx responses are reported as broken. Skipped URLs (from the ignore list) appear in results with `skipped: true` and are never counted as broken.
 
+#### `checkLinksString(content, options?)`
+
+Checks all external http/https URLs found in an HTML string. Returns `Promise<LinkCheckResult>`—same shape as `checkLinks`. Useful when HTML is available as a string rather than a file, e.g., to check links in a fetched document or API response.
+
+* `options.timeout`: Request timeout in milliseconds (default: `10000`)
+* `options.concurrency`: Maximum concurrent requests (default: `8`)
+* `options.warnOnPermanentRedirects`: Warn on 301/308 permanent redirects (default: `false`)
+* `options.ignore`: List of hostnames or URL prefixes to skip (default: `[]`)
+* `options.onProgress`: Called after each URL is checked
+* `options.onStart`: Called once with the total number of URLs to check
+
+Note: `result.files[0].path` will be `'(string input)'`, not a real file path. `result.countFileErrors` will always be `0`.
+
 #### `minify(filePaths, outputPaths, options?)`
 
 Minifies HTML files using HTML Minifier Next. Returns `Promise<MinificationResult>`.
 
 * `outputPaths`: Parallel array of output paths; pass the same value as `filePaths` for in-place minification
+* `options.preset`: HTML Minifier Next preset name (default: `'comprehensive'`)
+* `options.options`: Additional HTML Minifier Next options to merge with the preset
+
+#### `minifyString(content, options?)`
+
+Minifies an HTML string using HTML Minifier Next. Returns `Promise<string>`. Useful in content-pipeline contexts (Eleventy transforms, middleware, SSR) where HTML is available as a string rather than a file.
+
 * `options.preset`: HTML Minifier Next preset name (default: `'comprehensive'`)
 * `options.options`: Additional HTML Minifier Next options to merge with the preset
 

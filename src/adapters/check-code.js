@@ -69,3 +69,15 @@ export async function checkCode(filePaths, { preset = 'standard', ignore = [], c
   ]);
   return { validation: validateResult, deprecation: deprecatedResult };
 }
+
+const SYNTHETIC_PATH = '(string input)';
+
+/**
+ * Validate an HTML string and check for deprecated markup.
+ * @param {string} content
+ * @param {{ preset?: string, ignore?: string[] }} [options]
+ * @returns {Promise<CheckResult>}
+ */
+export async function checkCodeString(content, { preset = 'standard', ignore = [] } = {}) {
+  return checkCode([SYNTHETIC_PATH], { preset, ignore, contents: new Map([[SYNTHETIC_PATH, content]]) });
+}

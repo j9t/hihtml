@@ -265,3 +265,22 @@ export async function checkLinks(filePaths, {
   const countFileErrors = files.filter(f => f.error !== undefined).length;
   return { files, countBroken, countChecked: toCheck.size, countSkipped, countFileErrors };
 }
+
+const SYNTHETIC_PATH = '(string input)';
+
+/**
+ * Check all external http/https URLs found in an HTML string.
+ * @param {string} content
+ * @param {{
+ *   concurrency?: number,
+ *   timeout?: number,
+ *   warnOnPermanentRedirects?: boolean,
+ *   ignore?: string[],
+ *   onProgress?: () => void,
+ *   onStart?: (total: number) => void,
+ * }} [options]
+ * @returns {Promise<LinkCheckResult>}
+ */
+export async function checkLinksString(content, options = {}) {
+  return checkLinks([SYNTHETIC_PATH], { ...options, contents: new Map([[SYNTHETIC_PATH, content]]) });
+}

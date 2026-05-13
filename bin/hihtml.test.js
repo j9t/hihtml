@@ -8,9 +8,9 @@ import assert from 'node:assert';
 import { stripVTControlCharacters } from 'node:util';
 
 import { validate } from '../src/adapters/validate.js';
-import { checkCode } from '../src/adapters/check-code.js';
-import { checkLinks } from '../src/adapters/check-links.js';
-import { minify } from '../src/adapters/minify.js';
+import { checkCode, checkCodeString } from '../src/adapters/check-code.js';
+import { checkLinks, checkLinksString } from '../src/adapters/check-links.js';
+import { minify, minifyString } from '../src/adapters/minify.js';
 import { collect, read } from '../src/lib/files.js';
 import { loadConfig } from '../src/lib/config.js';
 
@@ -682,6 +682,43 @@ describe('Check code', () => {
   });
 });
 
+// Programmatic API: `checkCodeString`
+
+describe('Check code string', () => {
+  test('Returns expected result shape', async () => {
+    const result = await checkCodeString(CLEAN_HTML);
+    assert.ok('validation' in result);
+    assert.ok('deprecation' in result);
+    assert.ok('countErrors' in result.validation);
+    assert.ok('countIssues' in result.deprecation);
+  });
+
+  test('Clean HTML reports no issues', async () => {
+    const result = await checkCodeString(CLEAN_HTML);
+    assert.strictEqual(result.validation.countErrors, 0);
+    assert.strictEqual(result.deprecation.countIssues, 0);
+  });
+
+  test('Detects deprecated markup', async () => {
+    const result = await checkCodeString(DEPRECATED_HTML);
+    assert.ok(result.deprecation.countIssues > 0);
+    assert.ok(result.deprecation.files[0].elements.includes('center'));
+  });
+
+  test('Detects validation errors', async () => {
+    const result = await checkCodeString(INVALID_HTML);
+    assert.ok(result.validation.countErrors > 0);
+  });
+
+  test('Passes ignore list through to validation result', async () => {
+    const base = await checkCodeString(INVALID_HTML);
+    const ruleIds = [...new Set(base.validation.files[0].messages.map(m => m.ruleId))];
+    const result = await checkCodeString(INVALID_HTML, { ignore: ruleIds });
+    assert.strictEqual(result.validation.countErrors, 0);
+    assert.strictEqual(result.validation.countIgnored, base.validation.files[0].messages.length);
+  });
+});
+
 // Programmatic API: `checkLinks`
 
 describe('Check links', () => {
@@ -827,6 +864,38 @@ describe('Check links', () => {
   });
 });
 
+// Programmatic API: `checkLinksString`
+
+describe('Check links string', () => {
+  test('Returns expected result shape', async () => {
+    const result = await checkLinksString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="${testServerBase}/ok">OK</a></body></html>`);
+    assert.ok('files' in result);
+    assert.ok('countBroken' in result);
+    assert.ok('countChecked' in result);
+    assert.ok(Array.isArray(result.files));
+  });
+
+  test('Reports ok for 200 response', async () => {
+    const result = await checkLinksString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="${testServerBase}/ok">OK</a></body></html>`);
+    assert.strictEqual(result.countBroken, 0);
+    assert.strictEqual(result.countChecked, 1);
+    assert.strictEqual(result.files[0].links[0].ok, true);
+  });
+
+  test('Reports broken for 404 response', async () => {
+    const result = await checkLinksString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="${testServerBase}/not-found">Broken</a></body></html>`);
+    assert.strictEqual(result.countBroken, 1);
+    assert.strictEqual(result.files[0].links[0].ok, false);
+  });
+
+  test('No http/https links returns empty result', async () => {
+    const result = await checkLinksString(CLEAN_HTML);
+    assert.strictEqual(result.countBroken, 0);
+    assert.strictEqual(result.countChecked, 0);
+    assert.strictEqual(result.files[0].links.length, 0);
+  });
+});
+
 // Programmatic API: `minify`
 
 describe('Minify files', () => {
@@ -899,6 +968,31 @@ describe('Minify files', () => {
     const result = fs.readFileSync(outPath, 'utf8');
     assert.ok(result.includes('  Hello'), 'Expected whitespace to be preserved when collapseWhitespace is overridden to false');
     fs.unlinkSync(outPath);
+  });
+});
+
+// Programmatic API: `minifyString`
+
+describe('Minify string', () => {
+  test('Returns a string', async () => {
+    const result = await minifyString(CLEAN_HTML);
+    assert.strictEqual(typeof result, 'string');
+  });
+
+  test('Output is not larger than input', async () => {
+    const result = await minifyString(CLEAN_HTML);
+    assert.ok(Buffer.byteLength(result) <= Buffer.byteLength(CLEAN_HTML));
+  });
+
+  test('Collapses whitespace with default preset', async () => {
+    const result = await minifyString('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><p>  Hello   world  </p></body></html>');
+    assert.ok(!result.includes('  Hello'));
+  });
+
+  test('Respects options override', async () => {
+    const loose = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><p>  Hello   world  </p></body></html>';
+    const result = await minifyString(loose, { options: { collapseWhitespace: false } });
+    assert.ok(result.includes('  Hello'));
   });
 });
 

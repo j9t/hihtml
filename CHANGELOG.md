@@ -4,6 +4,14 @@ All notable changes to HiHTML are documented in this file, which is (mostly) AI-
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0-beta] - 2026-05-13
+
+### Added
+
+* Added `checkCodeString(content, options?)` to the programmatic API: validates an HTML string and checks it for deprecated markup, mirroring `checkCode` for string-based pipelines
+* Added `checkLinksString(content, options?)`: checks all external http/https URLs found in an HTML string, mirroring `checkLinks` for string-based pipelines
+* Added `minifyString(content, options?)`: minifies an HTML string and returns it, without any file I/O—useful in content-pipeline contexts such as Eleventy transforms, middleware, and SSR handlers
+
 ## [1.2.0-beta] - 2026-05-11
 
 ### Added

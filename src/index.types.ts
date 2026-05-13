@@ -11,8 +11,11 @@ import type {
 
 import {
   checkCode,
+  checkCodeString,
   checkLinks,
+  checkLinksString,
   minify,
+  minifyString,
   collect,
   read,
   loadConfig,
@@ -33,8 +36,11 @@ export type {
 
 export {
   checkCode,
+  checkCodeString,
   checkLinks,
+  checkLinksString,
   minify,
+  minifyString,
   collect,
   read,
   loadConfig,
