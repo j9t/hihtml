@@ -19,7 +19,6 @@ export { s as style };
  */
 export function formatValidationResult(result, quiet = false) {
   const withIssues = result.files.filter(f => f.messages.length > 0);
-  const cleanCount = result.files.length - withIssues.length;
 
   if (quiet && result.countErrors === 0 && result.countWarnings === 0) {
     if (result.countIgnored > 0)
@@ -51,9 +50,8 @@ export function formatValidationResult(result, quiet = false) {
     }
   }
 
-  if (!quiet && cleanCount > 0) {
-    lines.push(`  ${s.success(`${cleanCount} ${cleanCount === 1 ? 'file' : 'files'}: no issues`)}`);
-  }
+  if (!quiet && result.files.length > 0)
+    lines.push(filesSummary(result.files.length, withIssues.length, 'validated'));
 
   return lines.join('\n');
 }
@@ -65,7 +63,6 @@ export function formatValidationResult(result, quiet = false) {
  */
 export function formatDeprecationResult(result, quiet = false) {
   const withIssues = result.files.filter(f => f.error || f.elements.length > 0 || f.attributes.length > 0);
-  const cleanCount = result.files.length - withIssues.length;
 
   if (quiet && withIssues.length === 0) return '';
 
@@ -84,9 +81,8 @@ export function formatDeprecationResult(result, quiet = false) {
     }
   }
 
-  if (!quiet && cleanCount > 0) {
-    lines.push(`  ${s.success(`${cleanCount} ${cleanCount === 1 ? 'file' : 'files'}: no issues`)}`);
-  }
+  if (!quiet && result.files.length > 0)
+    lines.push(filesSummary(result.files.length, withIssues.length, 'checked for deprecated markup'));
 
   return lines.join('\n');
 }
@@ -100,7 +96,10 @@ export function formatLinkCheckResult(result, quiet = false) {
   const withIssues = result.files.filter(f =>
     f.error || f.links.some(l => !l.ok || l.skipped || l.warning === 'permanent-redirect')
   );
-  const cleanCount = result.files.length - withIssues.length;
+  const countIssues = withIssues.filter(f =>
+    f.error || f.links.some(l => !l.ok || l.warning === 'permanent-redirect')
+  ).length;
+  const countClean = result.files.length - withIssues.length;
 
   const hasRealIssues = result.countBroken > 0 || result.countFileErrors > 0
     || result.files.some(f => f.links.some(l => l.warning === 'permanent-redirect'));
@@ -142,10 +141,6 @@ export function formatLinkCheckResult(result, quiet = false) {
     }
   }
 
-  if (!quiet && cleanCount > 0 && (withIssues.length > 0 || result.countChecked > 0 || result.countSkipped > 0)) {
-    lines.push(`  ${s.success(`${cleanCount} ${cleanCount === 1 ? 'file' : 'files'}: no issues`)}`);
-  }
-
   const total = result.countChecked;
   const summaryCount = total === 0 && result.countSkipped === 0
     ? 'no http/https links'
@@ -158,11 +153,14 @@ export function formatLinkCheckResult(result, quiet = false) {
   const summaryFileErrors = result.countFileErrors > 0
     ? `, ${s.error(`${result.countFileErrors} file ${result.countFileErrors === 1 ? 'error' : 'errors'}`)}`
     : '';
+  const fileParts = [];
+  if (countIssues > 0) fileParts.push(s.warning(`${countIssues} with issues`));
+  if (countClean > 0) fileParts.push(s.success(`${countClean} clean`));
   const summaryBroken = result.countBroken === 0 && result.countFileErrors === 0
     ? s.success('no broken links')
-    : s.warning(`${result.countBroken} broken`);
+    : s.warning(`${result.countBroken} broken ${result.countBroken === 1 ? 'link' : 'links'}`);
 
-  lines.push(`\n  ${result.files.length} ${result.files.length === 1 ? 'file' : 'files'} · ${summaryCount}${summarySkipped}${summaryFileErrors} · ${summaryBroken}`);
+  lines.push(`\n  ${filesCount(result.files.length)} · ${summaryCount}${summarySkipped}${summaryFileErrors} · ${fileParts.join(', ')} · ${summaryBroken}`);
 
   return lines.join('\n');
 }
@@ -189,10 +187,21 @@ export function formatMinificationResult(result, quiet = false) {
 
   if (!quiet) {
     const successCount = result.files.filter(f => !f.error).length;
-    lines.push(`\n  ${s.success(`${successCount} ${successCount === 1 ? 'file' : 'files'} minified, ${formatBytes(saved)} saved`)}`);
+    lines.push(`\n  ${s.success(`${filesCount(successCount)} minified, ${formatBytes(saved)} saved`)}`);
   }
 
   return lines.join('\n');
+}
+
+/** @param {number} n @returns {string} */
+function filesCount(n) { return `${n} ${n === 1 ? 'file' : 'files'}`; }
+
+/** @param {number} total @param {number} issueCount @param {string} label @returns {string} */
+function filesSummary(total, issueCount, label) {
+  const parts = [];
+  if (issueCount > 0) parts.push(s.warning(`${issueCount} with issues`));
+  if (total - issueCount > 0) parts.push(s.success(`${total - issueCount} clean`));
+  return `\n  ${filesCount(total)} ${label} · ${parts.join(', ')}`;
 }
 
 /** @param {number} bytes @returns {string} */

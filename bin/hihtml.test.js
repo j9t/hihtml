@@ -217,6 +217,12 @@ describe('CLI `--check-code`', () => {
     const { stdout } = run(['-i', path.join(tempDir, 'clean.html')]);
     assert.ok(stdout.includes('Validation'));
   });
+
+  test('Numbers sections when multiple are shown', () => {
+    const { stdout } = run(['-c', '-i', path.join(tempDir, 'clean.html')]);
+    assert.ok(stdout.includes('1. '));
+    assert.ok(stdout.includes('2. '));
+  });
 });
 
 // CLI: Check links
@@ -308,6 +314,11 @@ describe('CLI `--check-links`', () => {
     assert.strictEqual(report.command, 'check-code+check-links');
     fs.unlinkSync(reportPath);
   });
+
+  test('Does not number section when only one check is shown', () => {
+    const { stdout } = run(['-l', '-i', path.join(tempDir, 'links_none.html')]);
+    assert.ok(!stdout.includes('1. '));
+  });
 });
 
 // CLI: Minify
@@ -394,6 +405,16 @@ describe('CLI `--all`', () => {
     assert.ok(stdout.includes('Minification'));
     assert.ok(fs.existsSync(path.join(outDir, 'page.html')));
     fs.rmSync(srcDir, { recursive: true, force: true });
+    fs.rmSync(outDir, { recursive: true, force: true });
+  });
+
+  test('Numbers all sections', () => {
+    const outDir = path.join(tempDir, 'all_numbered_out');
+    const { stdout } = run(['-a', '-i', path.join(tempDir, 'clean.html'), '-o', outDir]);
+    assert.ok(stdout.includes('1. '));
+    assert.ok(stdout.includes('2. '));
+    assert.ok(stdout.includes('3. '));
+    assert.ok(stdout.includes('4. '));
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 });

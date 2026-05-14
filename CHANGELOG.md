@@ -4,6 +4,15 @@ All notable changes to hihtml are documented in this file, which is (mostly) AI-
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1-beta] - 2026-05-14
+
+### Changed
+
+* Improved end-of-section summaries across all check types:
+  - Validation and deprecated markup sections now end with a line like “30 files validated · 17 with issues, 13 clean” (previously only the clean-file count was shown)
+  - Link check summary now includes the per-file breakdown (e.g., “19 with issues, 11 clean”) inline, replacing the separate floating “_x_ files: no issues” line; also fixed “3 broken” → “3 broken links”
+* Numbered output sections when more than one is shown (e.g., “1. Validation”, “2. Deprecated markup”), with the number repeated on the summary line for easier scanning in long output
+
 ## [1.3.0-beta] - 2026-05-13
 
 ### Added

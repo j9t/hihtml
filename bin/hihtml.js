@@ -132,9 +132,19 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       readProg.complete();
     }
 
-    let quietHadOutput = false;
-    const showQuietHint = () => {
-      if (opts.quiet && quietHadOutput) console.log('\n(Use `-r` for a full report, or run without `-q` for inline output.)');
+    const sections = [];
+    const sectionsPrint = () => {
+      const numbered = sections.length > 1;
+      sections.forEach((out, i) => {
+        if (!numbered) { console.log('\n' + out); return; }
+        const num = `${i + 1}. `;
+        const withTitle = num + out;
+        const withSummary = withTitle.replace(/\n(\n {2})([^\n]+)$/, `\n$1${num}$2`);
+        console.log('\n' + withSummary);
+      });
+    };
+    const quietHint = () => {
+      if (opts.quiet && sections.length > 0) console.log('\n(Use `-r` for a full report, or run without `-q` for inline output)');
     };
 
     /** @type {import('../src/adapters/check-code.js').CheckResult | undefined} */
@@ -151,9 +161,9 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       );
 
       const valOut = formatValidationResult(checkResult.validation, opts.quiet);
-      if (valOut) { console.log('\n' + valOut); quietHadOutput = true; }
+      if (valOut) sections.push(valOut);
       const depOut = formatDeprecationResult(checkResult.deprecation, opts.quiet);
-      if (depOut) { console.log('\n' + depOut); quietHadOutput = true; }
+      if (depOut) sections.push(depOut);
 
       report.results.checkCode = checkResult;
     }
@@ -176,16 +186,17 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       );
 
       const linkOut = formatLinkCheckResult(linkResult, opts.quiet);
-      if (linkOut) { console.log('\n' + linkOut); quietHadOutput = true; }
+      if (linkOut) sections.push(linkOut);
       report.results.links = linkResult;
     }
 
     if (opts.all && checkResult?.validation.countErrors > 0) {
+      sectionsPrint();
       console.error(
         '\n' + style.error(`${checkResult.validation.countErrors} validation ${checkResult.validation.countErrors === 1 ? 'error' : 'errors'} found—skipping minification`) + '\n' +
         '(Fix validation issues first or define HTML-validate rule IDs to ignore)'
       );
-      showQuietHint();
+      quietHint();
       if (opts.report !== undefined) await saveReport(report, opts.report);
       process.exit(1);
     }
@@ -220,10 +231,11 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       minifyProg.complete(minifyResult.files.some(f => f.error));
 
       const minOut = formatMinificationResult(minifyResult, opts.quiet);
-      if (minOut) { console.log('\n' + minOut); quietHadOutput = true; }
+      if (minOut) sections.push(minOut);
       report.results.minify = minifyResult;
     }
 
+    sectionsPrint();
     if (opts.report !== undefined) await saveReport(report, opts.report);
 
     const hasErrors = (report.results.checkCode?.validation.countErrors ?? 0) > 0
@@ -231,7 +243,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       || (report.results.links?.countFileErrors ?? 0) > 0
       || (report.results.minify?.files.some(f => f.error) ?? false);
 
-    showQuietHint();
+    quietHint();
     process.exit(hasErrors ? 1 : 0);
 
   } catch (err) {
