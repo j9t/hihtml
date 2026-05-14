@@ -14,7 +14,7 @@ hihtml—“high-quality HTML”—bundles several key HTML tools into one, maki
 npm i hihtml
 ```
 
-Recommended: Just run hihtml via `npx hihtml`.
+Tip: If you don’t plan to use hihtml programmatically, just run hihtml via `npx hihtml`!
 
 #### Execution
 
