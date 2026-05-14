@@ -133,7 +133,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
     }
 
     const sections = [];
-    const printSections = () => {
+    const sectionsPrint = () => {
       const numbered = sections.length > 1;
       sections.forEach((out, i) => {
         if (!numbered) { console.log('\n' + out); return; }
@@ -143,7 +143,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
         console.log('\n' + withSummary);
       });
     };
-    const showQuietHint = () => {
+    const quietHint = () => {
       if (opts.quiet && sections.length > 0) console.log('\n(Use `-r` for a full report, or run without `-q` for inline output)');
     };
 
@@ -191,12 +191,12 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
     }
 
     if (opts.all && checkResult?.validation.countErrors > 0) {
-      printSections();
+      sectionsPrint();
       console.error(
         '\n' + style.error(`${checkResult.validation.countErrors} validation ${checkResult.validation.countErrors === 1 ? 'error' : 'errors'} found—skipping minification`) + '\n' +
         '(Fix validation issues first or define HTML-validate rule IDs to ignore)'
       );
-      showQuietHint();
+      quietHint();
       if (opts.report !== undefined) await saveReport(report, opts.report);
       process.exit(1);
     }
@@ -235,7 +235,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       report.results.minify = minifyResult;
     }
 
-    printSections();
+    sectionsPrint();
     if (opts.report !== undefined) await saveReport(report, opts.report);
 
     const hasErrors = (report.results.checkCode?.validation.countErrors ?? 0) > 0
@@ -243,7 +243,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       || (report.results.links?.countFileErrors ?? 0) > 0
       || (report.results.minify?.files.some(f => f.error) ?? false);
 
-    showQuietHint();
+    quietHint();
     process.exit(hasErrors ? 1 : 0);
 
   } catch (err) {
