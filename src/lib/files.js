@@ -81,7 +81,10 @@ async function walk(dir, extensions, excludedDirs, results) {
           if (extensions.has(ext)) results.push(fullPath);
         }
         // Symlinked directories are skipped to prevent cycles
-      } catch { /* broken symlink—skip */ }
+      } catch (err) {
+        const code = /** @type {NodeJS.ErrnoException} */ (err).code;
+        if (code !== 'ENOENT' && code !== 'ELOOP' && code !== 'EACCES' && code !== 'EPERM') throw err;
+      }
       continue;
     }
 
