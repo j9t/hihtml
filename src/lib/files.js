@@ -27,7 +27,13 @@ export async function collect(dir, extensions = HTML_EXTENSIONS, excludedDirs = 
   }
   /** @type {string[]} */
   const results = [];
-  await walk(resolved, extensions, excludedDirs, results);
+  let rootCanonical;
+  try {
+    rootCanonical = await fs.promises.realpath(resolved);
+  } catch {
+    rootCanonical = resolved;
+  }
+  await walk(resolved, extensions, excludedDirs, results, rootCanonical);
   return results;
 }
 
@@ -77,7 +83,8 @@ async function walk(dir, extensions, excludedDirs, results, dirRoot = dir) {
     if (entry.isSymbolicLink()) {
       try {
         const real = await fs.promises.realpath(fullPath);
-        const inRoot = real === dirRoot || real.startsWith(dirRoot + path.sep);
+        const rel = path.relative(dirRoot, real);
+        const inRoot = rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
         if (inRoot) {
           const st = await fs.promises.stat(real);
           if (st.isFile()) {
