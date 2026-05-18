@@ -144,7 +144,9 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       });
     };
     const quietHint = () => {
-      if (opts.quiet && sections.length > 0) console.log('\n(Use `-r` for a full report, or run without `-q` for inline output)');
+      if (!opts.quiet || sections.length === 0) return;
+      const reportSuggestion = opts.report === undefined ? 'Use `-r` for a full report, or run' : 'Run';
+      console.log(`\n(${reportSuggestion} without \`-q\` for inline output)`);
     };
 
     /** @type {import('../src/adapters/check-code.js').CheckResult | undefined} */

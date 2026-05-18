@@ -1280,4 +1280,36 @@ describe('Load config', () => {
     const missing = path.join(tempDir, 'nonexistent-settings.json');
     await assert.rejects(() => loadConfig(undefined, missing), /Error reading settings file/);
   });
+
+  test('Throws on invalid `links.timeout` type', async () => {
+    const configDir = path.join(tempDir, 'badtype-timeout');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, '.hihtml.json'), JSON.stringify({ links: { timeout: 'ten seconds' } }));
+    await assert.rejects(() => loadConfig(configDir), /links\.timeout.*must be a positive number/);
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
+
+  test('Throws on non-integer `links.concurrency`', async () => {
+    const configDir = path.join(tempDir, 'badtype-concurrency');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, '.hihtml.json'), JSON.stringify({ links: { concurrency: 0 } }));
+    await assert.rejects(() => loadConfig(configDir), /links\.concurrency.*must be a positive integer/);
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
+
+  test('Throws on invalid `extensions` type', async () => {
+    const configDir = path.join(tempDir, 'badtype-extensions');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, '.hihtml.json'), JSON.stringify({ extensions: 'html' }));
+    await assert.rejects(() => loadConfig(configDir), /extensions.*must be an array of strings/);
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
+
+  test('Throws on invalid `validation.preset` type', async () => {
+    const configDir = path.join(tempDir, 'badtype-preset');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, '.hihtml.json'), JSON.stringify({ validation: { preset: 42 } }));
+    await assert.rejects(() => loadConfig(configDir), /validation\.preset.*must be a string/);
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
 });

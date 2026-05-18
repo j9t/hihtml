@@ -72,7 +72,18 @@ async function walk(dir, extensions, excludedDirs, results) {
   const subdirs = [];
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
-    if (entry.isSymbolicLink()) continue;
+
+    if (entry.isSymbolicLink()) {
+      try {
+        const resolved = await fs.promises.stat(fullPath);
+        if (resolved.isFile()) {
+          const ext = path.extname(entry.name).slice(1).toLowerCase();
+          if (extensions.has(ext)) results.push(fullPath);
+        }
+        // Symlinked directories are skipped to prevent cycles
+      } catch { /* broken symlink—skip */ }
+      continue;
+    }
 
     if (entry.isDirectory()) {
       if (!excludedDirs.has(entry.name)) {
