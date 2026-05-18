@@ -1,4 +1,4 @@
-# hihtml, the HTML Processing Supertool (Beta)
+# hihtml, the HTML Processing Supertool
 
 [![npm version](https://img.shields.io/npm/v/hihtml.svg)](https://www.npmjs.com/package/hihtml) [![Build status](https://github.com/j9t/hihtml/workflows/Tests/badge.svg)](https://github.com/j9t/hihtml/actions) [![Socket](https://badge.socket.dev/npm/package/hihtml)](https://socket.dev/npm/package/hihtml) [![GitHub Sponsors](https://badgen.net/static/Support/Open%20Source/cyan)](https://github.com/j9t/hihtml?sponsor=1)
 
@@ -129,6 +129,8 @@ Recursively collects HTML files from `dir`. Returns `Promise<string[]>`.
 * `extensions`: `Set<string>` of file extensions without dots (default: `html`, `htm`, `shtml`, `shtm`)
 * `excludedDirs`: `Set<string>` of directory names to skip (default: `node_modules`, `.git`)
 
+Symlinked files whose target resolves within the scanned root are followed; symlinks pointing outside the root or to directories are skipped.
+
 #### `checkCode(filePaths, options?)`
 
 Validates HTML files and checks for deprecated markup. Returns `Promise<ResultCode>` with `validation` (HTML-validate result) and `deprecation` (ObsoHTML result) properties.
@@ -220,7 +222,7 @@ Create a .hihtml.json file in your project root, or add a `"hihtml"` key to pack
 
 | Code | Meaning |
 |---|---|
-| `0` | No issues found |
+| `0` | No issues found (ObsoHTML warnings on deprecated markup are informational) |
 | `1` | Validation errors, broken links, or minification errors found |
 | `2` | Tool or runtime error |
 

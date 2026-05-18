@@ -27,7 +27,13 @@ export async function collect(dir, extensions = HTML_EXTENSIONS, excludedDirs = 
   }
   /** @type {string[]} */
   const results = [];
-  await walk(resolved, extensions, excludedDirs, results);
+  let rootCanonical;
+  try {
+    rootCanonical = await fs.promises.realpath(resolved);
+  } catch {
+    rootCanonical = resolved;
+  }
+  await walk(resolved, extensions, excludedDirs, results, rootCanonical);
   return results;
 }
 
@@ -58,8 +64,9 @@ export async function read(filePaths, { concurrency = DEFAULT_CONCURRENCY, onPro
  * @param {Set<string>} extensions
  * @param {Set<string>} excludedDirs
  * @param {string[]} results
+ * @param {string} [dirRoot]
  */
-async function walk(dir, extensions, excludedDirs, results) {
+async function walk(dir, extensions, excludedDirs, results, dirRoot = dir) {
   let entries;
   try {
     entries = await fs.promises.readdir(dir, { withFileTypes: true });
@@ -72,11 +79,30 @@ async function walk(dir, extensions, excludedDirs, results) {
   const subdirs = [];
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
-    if (entry.isSymbolicLink()) continue;
+
+    if (entry.isSymbolicLink()) {
+      try {
+        const real = await fs.promises.realpath(fullPath);
+        const rel = path.relative(dirRoot, real);
+        const inRoot = rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+        if (inRoot) {
+          const st = await fs.promises.stat(real);
+          if (st.isFile()) {
+            const ext = path.extname(entry.name).slice(1).toLowerCase();
+            if (extensions.has(ext)) results.push(fullPath);
+          }
+          // Symlinked directories are skipped even when in root, to prevent cycles
+        }
+      } catch (err) {
+        const code = /** @type {NodeJS.ErrnoException} */ (err).code;
+        if (code !== 'ENOENT' && code !== 'ELOOP' && code !== 'EACCES' && code !== 'EPERM') throw err;
+      }
+      continue;
+    }
 
     if (entry.isDirectory()) {
       if (!excludedDirs.has(entry.name)) {
-        subdirs.push(walk(fullPath, extensions, excludedDirs, results));
+        subdirs.push(walk(fullPath, extensions, excludedDirs, results, dirRoot));
       }
     } else if (entry.isFile()) {
       const ext = path.extname(entry.name).slice(1).toLowerCase();
