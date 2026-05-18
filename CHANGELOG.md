@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed
 
 * Fixed `--quiet` and `--report` hint, no longer suggesting `-r` when already in use
-* Fixed symlinked HTML files being silently skipped during directory traversal; symlinked files are now followed (symlinked directories remain skipped to prevent cycles)
+* Fixed symlinked HTML files being silently skipped during directory traversal; symlinked files whose target resolves within the scanned root are now followed (symlinks pointing outside the root or to directories are skipped)
 * Fixed malformed config values (e.g., non-numeric `links.timeout`, non-boolean `links.warnOnPermanentRedirects`) now producing clear error messages instead of silent undefined behavior
 
 ### Changed

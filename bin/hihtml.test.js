@@ -1193,6 +1193,41 @@ describe('Collect files', () => {
 
     fs.rmSync(exclDir, { recursive: true, force: true });
   });
+
+  test('Follows symlinked HTML files whose target is within the scanned root', async () => {
+    const symlinkDir = path.join(tempDir, 'symlink_in_root');
+    fs.mkdirSync(symlinkDir, { recursive: true });
+    fs.writeFileSync(path.join(symlinkDir, 'real.html'), '<p>Real</p>');
+    try {
+      fs.symlinkSync(path.join(symlinkDir, 'real.html'), path.join(symlinkDir, 'link.html'));
+    } catch {
+      fs.rmSync(symlinkDir, { recursive: true, force: true });
+      return; // Symlinks not supported on this platform/environment
+    }
+    const files = await collect(symlinkDir);
+    assert.ok(files.some(f => f.endsWith('real.html')));
+    assert.ok(files.some(f => f.endsWith('link.html')));
+    fs.rmSync(symlinkDir, { recursive: true, force: true });
+  });
+
+  test('Does not follow symlinked HTML files whose target is outside the scanned root', async () => {
+    const outerDir = path.join(tempDir, 'symlink_outer');
+    const innerDir = path.join(tempDir, 'symlink_inner');
+    fs.mkdirSync(outerDir, { recursive: true });
+    fs.mkdirSync(innerDir, { recursive: true });
+    fs.writeFileSync(path.join(outerDir, 'outside.html'), '<p>Outside</p>');
+    try {
+      fs.symlinkSync(path.join(outerDir, 'outside.html'), path.join(innerDir, 'link.html'));
+    } catch {
+      fs.rmSync(outerDir, { recursive: true, force: true });
+      fs.rmSync(innerDir, { recursive: true, force: true });
+      return;
+    }
+    const files = await collect(innerDir);
+    assert.strictEqual(files.length, 0);
+    fs.rmSync(outerDir, { recursive: true, force: true });
+    fs.rmSync(innerDir, { recursive: true, force: true });
+  });
 });
 
 // Programmatic API: `loadConfig`

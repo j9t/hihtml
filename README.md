@@ -129,7 +129,7 @@ Recursively collects HTML files from `dir`. Returns `Promise<string[]>`.
 * `extensions`: `Set<string>` of file extensions without dots (default: `html`, `htm`, `shtml`, `shtm`)
 * `excludedDirs`: `Set<string>` of directory names to skip (default: `node_modules`, `.git`)
 
-Symlinked files are followed; symlinked directories are skipped to prevent cycles.
+Symlinked files whose target resolves within the scanned root are followed; symlinks pointing outside the root or to directories are skipped.
 
 #### `checkCode(filePaths, options?)`
 
