@@ -234,7 +234,7 @@ Use the individual flags (`-c`, `-l`, `-m`) instead of `--all`/`-a`. Each flag o
 
 ### Where do I report issues?
 
-If in doubt or in a hurry, [report issues here](https://github.com/j9t/hihtml/issues/new). Otherwise, if the issue is related to HTML-validate, [report it with HTML-validate](https://gitlab.com/html-validate/html-validate/-/work_items/new?type=Issue&initialCreationContext=list-route). If the issue is related to ObsoHTML, [report it with ObsoHTML](https://github.com/j9t/obsohtml/issues/new). For HTML Minifier Next issues, [report them with HMN](https://github.com/j9t/html-minifier-next/issues/new). All projects are monitored and should respond promptly. Thank you!
+If in doubt or in a hurry, [report issues here](https://github.com/j9t/hihtml/issues/new). Otherwise, if the issue is related to HTML-validate, [report it with HTML-validate](https://gitlab.com/html-validate/html-validate/-/work_items/new?type=Issue&initialCreationContext=list-route). If the issue is related to ObsoHTML, [report it with ObsoHTML](https://github.com/j9t/obsohtml/issues/new). For HTML Minifier Next issues, [report them with HMN](https://github.com/j9t/html-minifier-next/issues/new). All projects are maintained and monitored and should respond promptly. Thank you!
 
 ### What does ObsoHTML do here when HTML-validate already reports on deprecated markup?
 
