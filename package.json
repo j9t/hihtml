@@ -12,7 +12,7 @@
   "description": "The HTML supertool to validate, link-check, and minify web pages",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^25.8.0",
+    "@types/node": "^25.9.1",
     "eslint": "^10.3.0",
     "globals": "^17.6.0",
     "typescript": "^6.0.3"
