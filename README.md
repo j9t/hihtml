@@ -10,11 +10,11 @@ hihtml—“high-quality HTML”—bundles several key HTML tools into one, maki
 
 #### Installation
 
-```console
-npm i hihtml
-```
+Consider using hihtml via npx:
 
-Tip: If you don’t plan to use hihtml programmatically, just run hihtml via `npx hihtml`!
+```shell
+npx hihtml
+```
 
 #### Execution
 
@@ -34,73 +34,75 @@ Without options, hihtml validates HTML files and checks for deprecated markup in
 | `-v`, `--version` | Show version number |
 | `-h`, `--help` | Show help |
 
-##### Example commands
+##### Example Commands
 
 Check the current directory:
 
-```console
+```shell
 npx hihtml
 ```
 
 Check a specific folder:
 
-```console
+```shell
 npx hihtml -c -i path/to/project
 ```
 
 Check all external http/https URLs in the current directory:
 
-```console
+```shell
 npx hihtml -l
 ```
 
 Check markup and links together:
 
-```console
+```shell
 npx hihtml -c -l
 ```
 
 Minify HTML files in-place (prompts for confirmation):
 
-```console
+```shell
 npx hihtml -m
 ```
 
 Minify into a separate output directory:
 
-```console
+```shell
 npx hihtml -m -i src -o dist
 ```
 
 Check, then minify only if validation passes:
 
-```console
+```shell
 npx hihtml -a
 ```
 
 Use a specific settings file:
 
-```console
+```shell
 npx hihtml -s ~/my-hihtml.json
 npx hihtml -a -i /path/to/site -s ~/my-hihtml.json
 ```
 
 Save a JSON report:
 
-```console
+```shell
 npx hihtml -r
 npx hihtml -r results.json
 ```
 
 Run quietly (no output when clean, useful in CI):
 
-```console
+```shell
 npx hihtml -q
 npx hihtml -q -l
 npx hihtml -q -a -i src -o dist
 ```
 
 ### 2. Programmatic API
+
+Install hihtml in your project, e.g., via `npm i -D hihtml`, then import and use what you need:
 
 ```js
 import { checkCode, checkCodeString, checkLinks, checkLinksString, minify, minifyString, collect } from 'hihtml';
