@@ -1241,8 +1241,20 @@ describe('Load config', () => {
     fs.rmdirSync(configDir);
   });
 
-  test('Loads .hihtml.json', async () => {
+  test('Loads hihtml.config.json', async () => {
     const configDir = path.join(tempDir, 'withconfig');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(configDir, 'hihtml.config.json'),
+      JSON.stringify({ validation: { preset: 'standard' } })
+    );
+    const config = await loadConfig(configDir);
+    assert.strictEqual(config.validation?.preset, 'standard');
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
+
+  test('Loads .hihtml.json (former name, still supported)', async () => {
+    const configDir = path.join(tempDir, 'withlegacyconfig');
     fs.mkdirSync(configDir, { recursive: true });
     fs.writeFileSync(
       path.join(configDir, '.hihtml.json'),
@@ -1250,6 +1262,16 @@ describe('Load config', () => {
     );
     const config = await loadConfig(configDir);
     assert.strictEqual(config.validation?.preset, 'standard');
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
+
+  test('hihtml.config.json takes precedence over .hihtml.json', async () => {
+    const configDir = path.join(tempDir, 'bothfileconfig');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, 'hihtml.config.json'), JSON.stringify({ validation: { preset: 'a11y' } }));
+    fs.writeFileSync(path.join(configDir, '.hihtml.json'), JSON.stringify({ validation: { preset: 'standard' } }));
+    const config = await loadConfig(configDir);
+    assert.strictEqual(config.validation?.preset, 'a11y');
     fs.rmSync(configDir, { recursive: true, force: true });
   });
 

@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const CONFIG_FILE = '.hihtml.json';
+// Looked up in this order, honoring past config file names
+const CONFIG_FILES = ['hihtml.config.json', '.hihtml.json'];
 
 /**
  * @param {unknown} config
@@ -62,7 +63,32 @@ function validateConfig(config, source) {
  */
 
 /**
- * Load configuration from a specific file, .hihtml.json, or the `"hihtml"` key in package.json.
+ * Reads and validates one config file from `cwd`, returning `undefined` when
+ * the file doesn’t exist (so the caller can try the next name).
+ * @param {string} cwd
+ * @param {string} fileName
+ * @returns {Promise<HihtmlConfig | undefined>}
+ */
+async function readConfigFile(cwd, fileName) {
+  const configPath = path.join(cwd, fileName);
+  let parsed;
+  try {
+    const content = await fs.promises.readFile(configPath, 'utf8');
+    parsed = JSON.parse(content);
+  } catch (err) {
+    const nodeErr = /** @type {NodeJS.ErrnoException} */ (err);
+    if (nodeErr.code !== 'ENOENT') throw new Error(`Error reading ${fileName}: ${nodeErr.message}`, { cause: err });
+    return undefined;
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`${fileName} must contain a JSON object`);
+  }
+  validateConfig(parsed, fileName);
+  return parsed;
+}
+
+/**
+ * Load configuration from a specific file, hihtml.config.json, or the `"hihtml"` key in package.json.
  * When `filePath` is given, only that file is read (no CWD fallback).
  * If the file contains a `"hihtml"` key, that key’s value is used; otherwise the root object is used.
  * @param {string} [cwd]
@@ -93,21 +119,9 @@ export async function loadConfig(cwd = process.cwd(), filePath = undefined) {
     return parsed;
   }
 
-  const configPath = path.join(cwd, CONFIG_FILE);
-  let parsed;
-  try {
-    const content = await fs.promises.readFile(configPath, 'utf8');
-    parsed = JSON.parse(content);
-  } catch (err) {
-    const nodeErr = /** @type {NodeJS.ErrnoException} */ (err);
-    if (nodeErr.code !== 'ENOENT') throw new Error(`Error reading ${CONFIG_FILE}: ${nodeErr.message}`, { cause: err });
-  }
-  if (parsed !== undefined) {
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error(`${CONFIG_FILE} must contain a JSON object`);
-    }
-    validateConfig(parsed, CONFIG_FILE);
-    return parsed;
+  for (const fileName of CONFIG_FILES) {
+    const parsed = await readConfigFile(cwd, fileName);
+    if (parsed !== undefined) return parsed;
   }
 
   const pkgPath = path.join(cwd, 'package.json');
