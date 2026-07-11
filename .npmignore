@@ -3,6 +3,7 @@
 .github/
 bin/hihtml.test.js
 src/index.types.ts
+.editorconfig
 .gitignore
 .nvmrc
 eslint.config.js
