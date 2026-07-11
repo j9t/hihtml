@@ -192,11 +192,11 @@ Minifies an HTML string using HTML Minifier Next. Returns `Promise<string>`. Use
 
 #### `loadConfig(cwd?, filePath?)`
 
-Loads hihtml configuration. When `filePath` is given, only that file is read (no CWD fallback); if it contains a `"hihtml"` key that value is used, otherwise the root object is used. Without `filePath`, reads `.hihtml.json` or the `"hihtml"` key in `package.json` from `cwd`. Returns `Promise<HihtmlConfig>`.
+Loads hihtml configuration. When `filePath` is given, only that file is read (no CWD fallback); if it contains a `"hihtml"` key that value is used, otherwise the root object is used. Without `filePath`, reads hihtml.config.json or the `"hihtml"` key in package.json from `cwd`. Returns `Promise<HihtmlConfig>`.
 
 ## Configuration
 
-Create a .hihtml.json file in your project root, or add a `"hihtml"` key to package.json. Both use the same format (here showing hihtml’s defaults):
+Create a hihtml.config.json file in your project root, or add a `"hihtml"` key to package.json. Both use the same format (here showing hihtml’s defaults):
 
 ```json
 {
@@ -218,7 +218,7 @@ Create a .hihtml.json file in your project root, or add a `"hihtml"` key to pack
 }
 ```
 
-.hihtml.json takes precedence over package.json when both are present.
+hihtml.config.json takes precedence over package.json when both are present.
 
 ## Exit Codes
 
