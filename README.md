@@ -100,7 +100,7 @@ npx hihtml -q -l
 npx hihtml -q -a -i src -o dist
 ```
 
-### 2. Programmatic API
+### 2. Programmatic Use
 
 Install hihtml in your project, e.g., via `npm i -D hihtml`, then import and use what you need:
 
