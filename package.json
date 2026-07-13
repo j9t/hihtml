@@ -23,6 +23,11 @@
       "default": "./src/index.js"
     }
   },
+  "files": [
+    "bin/hihtml.js",
+    "src",
+    "!src/index.types.ts"
+  ],
   "funding": "https://github.com/j9t/hihtml?sponsor=1",
   "homepage": "https://github.com/j9t/hihtml",
   "keywords": [
