@@ -32,7 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
-* Clarified in documentation that ObsoHTML warnings are informational (and exit `0`)
+* Clarified in documentation that ObsoHTML warnings are informational (and exit “0”)
 
 ## [1.3.1-beta] - 2026-05-14
 
