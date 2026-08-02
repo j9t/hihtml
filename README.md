@@ -1,6 +1,6 @@
 # hihtml, the HTML Processing Supertool
 
-[![npm version](https://img.shields.io/npm/v/hihtml.svg)](https://www.npmjs.com/package/hihtml) [![Build status](https://github.com/j9t/hihtml/workflows/Tests/badge.svg)](https://github.com/j9t/hihtml/actions) [![Socket](https://badge.socket.dev/npm/package/hihtml)](https://socket.dev/npm/package/hihtml) [![GitHub Sponsors](https://badgen.net/static/Support/Open%20Source/cyan)](https://github.com/j9t/hihtml?sponsor=1)
+[![npm version](https://img.shields.io/npm/v/hihtml.svg)](https://www.npmjs.com/package/hihtml) [![Build status](https://github.com/j9t/hihtml/workflows/Tests/badge.svg)](https://github.com/j9t/hihtml/actions) [![Socket](https://badge.socket.dev/npm/package/hihtml)](https://socket.dev/npm/package/hihtml) [![GitHub Sponsors](https://badgen.net/static/Support/Open%20Source/cyan)](https://github.com/sponsors/j9t)
 
 hihtml—“high-quality HTML”—bundles several key HTML tools into one, making HTML validation and semantics control, link checking, and minification as easy as it gets: [HTML-validate](https://html-validate.org/) for validation, [ObsoHTML](https://github.com/j9t/obsohtml) for deprecated markup detection, Node’s built-in `http`/`https` for link checking, and [HTML Minifier Next](https://github.com/j9t/html-minifier-next) for minification. hihtml provides a CLI and a programmatic API, and comes with strong defaults but is still highly configurable.
 
