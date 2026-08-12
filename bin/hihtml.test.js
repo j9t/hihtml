@@ -182,6 +182,12 @@ describe('CLI flags', () => {
     assert.ok(stdout.includes('center'));
   });
 
+  test('Accepts a positional argument and `--input` naming the same directory two ways', () => {
+    const { stderr, status } = run(['-c', tempDir, '-i', `${tempDir}${path.sep}`]);
+    assert.ok(!stderr.includes('Cannot combine'), 'Same directory should not read as a conflict');
+    assert.strictEqual(status, 1, 'Exit reflects the findings, not a CLI error');
+  });
+
   test('Rejects a positional argument combined with a differing `--input`', () => {
     const { stderr, status } = run(['-c', tempDir, '-i', path.join(tempDir, 'clean.html')]);
     assert.ok(stderr.includes('Cannot combine a directory argument with `--input`'));

@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-* Accepted the input directory as a positional argument (e.g., `hihtml src`), which previously errored out
+* Accepted the input path (directory or file) as a positional argument (e.g., `hihtml src`), which previously errored out
   - Adjusted to reject a `--report` value that doesn’t end with a `.json` filename
 
 ## [1.4.1] - 2026-08-02

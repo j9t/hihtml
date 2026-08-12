@@ -28,7 +28,7 @@ program
   .option('-l, --check-links', 'check all external http/https URLs for broken references')
   .option('-m, --minify', 'minify HTML files (in-place unless `--output` is set)')
   .option('-a, --all', 'check HTML code and links, then minify if no validation errors (built-in conformance gate—different from using all individual flags together)')
-  .argument('[dir]', 'input directory (default: current directory)')
+  .argument('[dir]', 'input directory, or a single file (default: current directory)')
   .option('-i, --input <dir>', 'input directory (alternative to the positional argument)', '.')
   .option('-o, --output <dir>', 'output directory for minification (default: same as input)')
   .option('-s, --settings <file>', 'load configuration from a specific JSON file (overrides CWD config lookup)')
@@ -60,7 +60,9 @@ const opts = program.opts();
 // apart from the fallback the positional is allowed to replace
 const [inputPositional] = program.args;
 if (inputPositional) {
-  if (program.getOptionValueSource('input') !== 'default' && inputPositional !== opts.input) {
+  // Resolved before comparing, so naming one directory two ways (`src` and
+  // `./src`) isn’t mistaken for naming two
+  if (program.getOptionValueSource('input') !== 'default' && path.resolve(inputPositional) !== path.resolve(opts.input)) {
     console.error(styleText('red', 'Cannot combine a directory argument with `--input`—pass one or the other'));
     process.exit(1);
   }
