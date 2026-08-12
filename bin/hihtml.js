@@ -28,7 +28,8 @@ program
   .option('-l, --check-links', 'check all external http/https URLs for broken references')
   .option('-m, --minify', 'minify HTML files (in-place unless `--output` is set)')
   .option('-a, --all', 'check HTML code and links, then minify if no validation errors (built-in conformance gate—different from using all individual flags together)')
-  .option('-i, --input <dir>', 'input directory', '.')
+  .argument('[dir]', 'input directory (default: current directory)')
+  .option('-i, --input <dir>', 'input directory (alternative to the positional argument)', '.')
   .option('-o, --output <dir>', 'output directory for minification (default: same as input)')
   .option('-s, --settings <file>', 'load configuration from a specific JSON file (overrides CWD config lookup)')
   .option('-r, --report [file]', 'save JSON report (default filename: hihtml-report.json)')
@@ -41,6 +42,7 @@ Examples:
   npx hihtml -c -l             Check HTML code and links
   npx hihtml -m                Minify current directory in-place
   npx hihtml -a                Validate, check, check links, then minify if no validation errors
+  npx hihtml src               Check src/ for HTML code issues
   npx hihtml -i src -o dist    Minify src/ into dist/
   npx hihtml -s ~/my.json      Use a specific settings file
   npx hihtml -r                Save report to hihtml-report.json
@@ -50,6 +52,17 @@ Examples:
 program.parse(process.argv);
 
 const opts = program.opts();
+
+// `--input` carries a default, so only its source tells an explicit `-i src`
+// apart from the fallback the positional is allowed to replace
+const [inputPositional] = program.args;
+if (inputPositional) {
+  if (program.getOptionValueSource('input') !== 'default' && inputPositional !== opts.input) {
+    console.error(styleText('red', 'Cannot combine a directory argument with `--input`—pass one or the other'));
+    process.exit(1);
+  }
+  opts.input = inputPositional;
+}
 
 const isDefault = !opts.all && !opts.checkCode && !opts.minify && !opts.checkLinks;
 if (isDefault) opts.checkCode = true;

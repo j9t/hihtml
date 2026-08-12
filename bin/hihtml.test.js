@@ -170,6 +170,23 @@ describe('CLI flags', () => {
     const { stdout } = run(['-c', '-i', path.join(tempDir, 'clean.html')]);
     assert.ok(!stdout.includes('HTML code issues'));
   });
+
+  test('Accepts the input as a positional argument', () => {
+    const { stdout, status } = run(['-c', path.join(tempDir, 'deprecated.html')]);
+    assert.ok(stdout.includes('center'));
+    assert.strictEqual(status, 1);
+  });
+
+  test('Checks the working directory when no path is given', () => {
+    const { stdout } = run(['-c'], '', tempDir);
+    assert.ok(stdout.includes('center'));
+  });
+
+  test('Rejects a positional argument combined with a differing `--input`', () => {
+    const { stderr, status } = run(['-c', tempDir, '-i', path.join(tempDir, 'clean.html')]);
+    assert.ok(stderr.includes('Cannot combine a directory argument with `--input`'));
+    assert.strictEqual(status, 1);
+  });
 });
 
 // CLI: Check code (validate)

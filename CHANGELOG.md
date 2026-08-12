@@ -4,6 +4,12 @@ All notable changes to hihtml are documented in this file, which is (mostly) AI-
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-12
+
+### Added
+
+* Accepted the input directory as a positional argument (e.g., `hihtml src`), which previously errored out
+
 ## [1.4.1] - 2026-08-02
 
 ### Changed
