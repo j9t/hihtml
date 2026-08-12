@@ -18,6 +18,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const scriptPath = path.join(__dirname, 'hihtml.js');
 const tempDir = path.join(__dirname, 'temp_test');
 
+// Permission bits don’t apply to root, and `chmod` is a no-op on Windows
+const canTestPermissions = process.platform !== 'win32' && process.getuid?.() !== 0;
+
 function run(args, stdinInput = '', cwd = undefined) {
   const result = spawnSync('node', [scriptPath, ...args], {
     encoding: 'utf-8',
@@ -128,6 +131,33 @@ describe('CLI flags', () => {
     assert.ok(stdout.includes('--check-code'));
     assert.ok(stdout.includes('--minify'));
     assert.strictEqual(status, 0);
+  });
+
+  // A path that isn’t there used to collect no files and exit `0`, reading as a clean run
+  test('Fails on a path that does not exist', () => {
+    const { stderr, status } = run([path.join(tempDir, 'nonexistent')]);
+    assert.match(stderr, /No such file or directory/);
+    assert.strictEqual(status, 1);
+  });
+
+  test('Fails on a `--input` path that does not exist', () => {
+    const { stderr, status } = run(['-i', path.join(tempDir, 'nonexistent')]);
+    assert.match(stderr, /No such file or directory/);
+    assert.strictEqual(status, 1);
+  });
+
+  test('Fails on a directory it cannot read', { skip: !canTestPermissions }, () => {
+    const dirLocked = path.join(tempDir, 'locked_input');
+    fs.mkdirSync(dirLocked, { recursive: true });
+    fs.chmodSync(dirLocked, 0o000);
+    try {
+      const { stderr, status } = run([dirLocked]);
+      assert.match(stderr, /Cannot read/);
+      assert.strictEqual(status, 1);
+    } finally {
+      fs.chmodSync(dirLocked, 0o755);
+      fs.rmSync(dirLocked, { recursive: true, force: true });
+    }
   });
 
   test('`-c -m` runs check and minify', () => {
@@ -246,7 +276,7 @@ describe('CLI flags', () => {
 // CLI: Check code (validate)
 
 describe('CLI `--check-code`', () => {
-  test('Exits “0” when no HTML files are found', () => {
+  test('Exits `0` when no HTML files are found', () => {
     const emptyDir = path.join(tempDir, 'empty');
     fs.mkdirSync(emptyDir, { recursive: true });
     const { status } = run(['-c', '-i', emptyDir]);
@@ -269,17 +299,17 @@ describe('CLI `--check-code`', () => {
     assert.ok(stdout.includes('center'));
   });
 
-  test('Exits “1” when deprecated markup is found', () => {
+  test('Exits `1` when deprecated markup is found', () => {
     const { status } = run(['-c', '-i', path.join(tempDir, 'deprecated.html')]);
     assert.strictEqual(status, 1);
   });
 
-  test('Exits “1” when validation errors are found', () => {
+  test('Exits `1` when validation errors are found', () => {
     const { status } = run(['-c', '-i', path.join(tempDir, 'invalid.html')]);
     assert.strictEqual(status, 1);
   });
 
-  test('Exits “0” for clean HTML', () => {
+  test('Exits `0` for clean HTML', () => {
     const { status } = run(['-c', '-i', path.join(tempDir, 'clean.html')]);
     assert.strictEqual(status, 0);
   });
@@ -318,12 +348,12 @@ describe('CLI `--check-links`', () => {
     assert.ok(stdout.includes('broken') || stdout.includes('1'));
   });
 
-  test('Exits “1” with broken links', () => {
+  test('Exits `1` with broken links', () => {
     const { status } = run(['-l', '-i', path.join(tempDir, 'links_refused.html')]);
     assert.strictEqual(status, 1);
   });
 
-  test('Exits “0” when broken links are ignored', () => {
+  test('Exits `0` when broken links are ignored', () => {
     const ignoreDir = path.join(tempDir, 'ignore_test');
     fs.mkdirSync(ignoreDir, { recursive: true });
     fs.writeFileSync(
@@ -358,7 +388,7 @@ describe('CLI `--check-links`', () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 
-  test('`--all` still exits “1” for validation errors (link check does not change gate)', () => {
+  test('`--all` still exits `1` for validation errors (link check does not change gate)', () => {
     // invalid.html has no http/https links, so link check completes quickly before the gate
     const outDir = path.join(tempDir, 'all_links_invalid_out');
     const { status } = run(['-a', '-i', path.join(tempDir, 'invalid.html'), '-o', outDir]);
@@ -433,7 +463,7 @@ describe('CLI `--all`', () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 
-  test('Skips minification and exits “1” when validation errors are found', () => {
+  test('Skips minification and exits `1` when validation errors are found', () => {
     const outDir = path.join(tempDir, 'all_err_out');
     const { stdout, status } = run(['-a', '-i', path.join(tempDir, 'invalid.html'), '-o', outDir]);
     assert.strictEqual(status, 1);
@@ -441,7 +471,7 @@ describe('CLI `--all`', () => {
     assert.ok(!fs.existsSync(path.join(outDir, 'invalid.html')));
   });
 
-  test('Proceeds to minification and exits “0” when all validation errors are ignored via config', async () => {
+  test('Proceeds to minification and exits `0` when all validation errors are ignored via config', async () => {
     const ignoreDir = path.join(tempDir, 'validation_ignore_cli');
     const outDir = path.join(tempDir, 'validation_ignore_cli_out');
     fs.mkdirSync(ignoreDir, { recursive: true });
@@ -464,7 +494,7 @@ describe('CLI `--all`', () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 
-  test('Runs check and minify and exits “0” when only deprecated markup is found (no validation errors)', () => {
+  test('Runs check and minify and exits `0` when only deprecated markup is found (no validation errors)', () => {
     // Uses a11y preset (via config) + `<tt>` element: ObsoHTML flags it, html-validate:a11y does not
     const srcDir = path.join(tempDir, 'all_deprecated_src');
     const outDir = path.join(tempDir, 'all_deprecated_out');
@@ -592,9 +622,22 @@ describe('CLI `--settings`', () => {
     fs.unlinkSync(settingsPath);
   });
 
-  test('Exits "2" when settings file does not exist', () => {
+  // A settings file the user named is theirs to fix, like any other argument
+  test('Exits "1" when settings file does not exist', () => {
     const { status } = run(['-c', '-i', path.join(tempDir, 'clean.html'), '-s', path.join(tempDir, 'nonexistent.json')]);
-    assert.strictEqual(status, 2);
+    assert.strictEqual(status, 1);
+  });
+
+  test('Exits "1" on an unusable setting', () => {
+    const settingsPath = path.join(tempDir, 'bad_setting.json');
+    fs.writeFileSync(settingsPath, JSON.stringify({ links: { concurrency: 'many' } }));
+    try {
+      const { stderr, status } = run(['-c', '-i', path.join(tempDir, 'clean.html'), '-s', settingsPath]);
+      assert.match(stderr, /`links\.concurrency` must be a positive integer/);
+      assert.strictEqual(status, 1);
+    } finally {
+      fs.unlinkSync(settingsPath);
+    }
   });
 });
 

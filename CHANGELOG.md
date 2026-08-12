@@ -4,6 +4,17 @@ All notable changes to hihtml are documented in this file, which is (mostly) AI-
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-08-13
+
+### Fixed
+
+* Ensured to fail with a message and a non-zero exit when the input path doesn’t exist or can’t be read; a scripted run pointing at a mistyped path now fails instead of passing
+
+### Changed
+
+* Changed an unusable setting or an unreadable settings file to exit `1`, like every other input hihtml can’t work with; `2` is now reserved for a run that fails on its own, such as a checker that can’t be loaded
+* Renamed the positional argument to `path` in the help output, matching that it takes a directory or a single file
+
 ## [1.5.0] - 2026-08-12
 
 ### Added
@@ -45,7 +56,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
-* Clarified in documentation that ObsoHTML warnings are informational (and exit “0”)
+* Clarified in documentation that ObsoHTML warnings are informational (and exit `0`)
 
 ## [1.3.1-beta] - 2026-05-14
 

@@ -28,7 +28,7 @@ program
   .option('-l, --check-links', 'check all external http/https URLs for broken references')
   .option('-m, --minify', 'minify HTML files (in-place unless `--output` is set)')
   .option('-a, --all', 'check HTML code and links, then minify if no validation errors (built-in conformance gate—different from using all individual flags together)')
-  .argument('[dir]', 'input directory, or a single file (default: current directory)')
+  .argument('[path]', 'input directory, or a single file (default: current directory)')
   .option('-i, --input <dir>', 'input directory (alternative to the positional argument)', '.')
   .option('-o, --output <dir>', 'output directory for minification (default: same as input)')
   .option('-s, --settings <file>', 'load configuration from a specific JSON file (overrides CWD config lookup)')
@@ -67,6 +67,21 @@ if (inputPositional) {
     process.exit(1);
   }
   opts.input = inputPositional;
+}
+
+let inputStats;
+try {
+  inputStats = fs.statSync(opts.input);
+} catch {
+  console.error(styleText('red', `No such file or directory: ${opts.input}`));
+  process.exit(1);
+}
+
+try {
+  fs.accessSync(opts.input, inputStats.isDirectory() ? fs.constants.R_OK | fs.constants.X_OK : fs.constants.R_OK);
+} catch {
+  console.error(styleText('red', `Cannot read ${opts.input}`));
+  process.exit(1);
 }
 
 // The hint below is meant to be copied, so a path holding whitespace is quoted
@@ -286,7 +301,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
   } catch (err) {
     if (process.stderr.isTTY) process.stderr.write('\n');
     console.error(style.error(`Error: ${err instanceof Error ? err.message : String(err)}`));
-    process.exit(2);
+    process.exit(err?.setupFailed ? 1 : 2);
   }
 })();
 
