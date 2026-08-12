@@ -160,6 +160,22 @@ describe('CLI flags', () => {
     }
   });
 
+  // `statSync` fails with `EACCES` here, for an input that is nonetheless there
+  test('Fails on an input whose parent cannot be searched', { skip: !canTestPermissions }, () => {
+    const dirParent = path.join(tempDir, 'locked_parent');
+    const dirChild = path.join(dirParent, 'child');
+    fs.mkdirSync(dirChild, { recursive: true });
+    fs.chmodSync(dirParent, 0o000);
+    try {
+      const { stderr, status } = run([dirChild]);
+      assert.match(stderr, /Cannot read/);
+      assert.strictEqual(status, 1);
+    } finally {
+      fs.chmodSync(dirParent, 0o755);
+      fs.rmSync(dirParent, { recursive: true, force: true });
+    }
+  });
+
   test('`-c -m` runs check and minify', () => {
     const outDir = path.join(tempDir, 'cm_out');
     const { stdout, status } = run(['-c', '-m', '-i', path.join(tempDir, 'clean.html'), '-o', outDir]);

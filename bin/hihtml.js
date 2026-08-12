@@ -72,8 +72,13 @@ if (inputPositional) {
 let inputStats;
 try {
   inputStats = fs.statSync(opts.input);
-} catch {
-  console.error(styleText('red', `No such file or directory: ${opts.input}`));
+} catch (err) {
+  // A parent directory without search permission fails here, too, for a path
+  // that may well be there
+  const reason = err.code === 'ENOENT' || err.code === 'ENOTDIR'
+    ? `No such file or directory: ${opts.input}`
+    : `Cannot read ${opts.input}`;
+  console.error(styleText('red', reason));
   process.exit(1);
 }
 
