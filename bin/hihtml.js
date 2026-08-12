@@ -53,6 +53,9 @@ program.parse(process.argv);
 
 const opts = program.opts();
 
+// @@ Consider dropping `--input` in favor of positional argument;
+// currently kept for symmetry with `--output`
+//
 // `--input` carries a default, so only its source tells an explicit `-i src`
 // apart from the fallback the positional is allowed to replace
 const [inputPositional] = program.args;
@@ -62,6 +65,15 @@ if (inputPositional) {
     process.exit(1);
   }
   opts.input = inputPositional;
+}
+
+// `--report` takes an optional value, so it swallows whatever follows it—and
+// with the input directory as a positional, `hihtml -r src` is an easy slip.
+// Report files are JSON; anything else is the mistake.
+if (typeof opts.report === 'string' && !/\.json$/i.test(opts.report)) {
+  const hint = fs.existsSync(opts.report) ? `—did you mean \`hihtml ${opts.report} -r\`?` : '';
+  console.error(styleText('red', `\`--report\` expects a \`.json\` filename, got \`${opts.report}\`${hint}`));
+  process.exit(1);
 }
 
 const isDefault = !opts.all && !opts.checkCode && !opts.minify && !opts.checkLinks;

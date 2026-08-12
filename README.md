@@ -90,7 +90,10 @@ Save a JSON report:
 ```shell
 npx hihtml -r
 npx hihtml -r results.json
+npx hihtml src -r
 ```
+
+(Because `--report` takes an optional value, it claims whatever token follows it—so the directory goes before `-r`, not after it.)
 
 Run quietly (no output when clean, useful in CI):
 

@@ -187,6 +187,42 @@ describe('CLI flags', () => {
     assert.ok(stderr.includes('Cannot combine a directory argument with `--input`'));
     assert.strictEqual(status, 1);
   });
+
+  test('Rejects a `--report` value that is not a `.json` filename', () => {
+    const { stderr, status } = run(['-c', '-r', 'report.txt'], '', tempDir);
+    assert.ok(stderr.includes('`--report` expects a `.json` filename'));
+    assert.strictEqual(status, 1);
+  });
+
+  test('Suggests the positional form when `--report` swallowed an existing path', () => {
+    // `-r` takes an optional value, so `hihtml -r <dir>` would otherwise write
+    // the report over the directory the user meant to check
+    const { stderr, status } = run(['-c', '-r', tempDir]);
+    assert.ok(stderr.includes(`did you mean \`hihtml ${tempDir} -r\`?`));
+    assert.strictEqual(status, 1);
+  });
+
+  test('Leaves a file `--report` swallowed untouched', () => {
+    const file = path.join(tempDir, 'clean.html');
+    const before = fs.readFileSync(file, 'utf8');
+    const { status } = run(['-c', '-r', file]);
+    assert.strictEqual(status, 1);
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), before);
+  });
+
+  test('Accepts `--report` with a `.json` filename, in any case', () => {
+    for (const name of ['results.json', 'RESULTS.JSON']) {
+      const { stdout } = run(['-c', name === 'results.json' ? '-r' : '--report', name], '', tempDir);
+      assert.ok(stdout.includes(`Report saved to ${name}`));
+      fs.rmSync(path.join(tempDir, name), { force: true });
+    }
+  });
+
+  test('Accepts `--report` without a value', () => {
+    const { stdout } = run(['-c', '-r'], '', tempDir);
+    assert.ok(stdout.includes('Report saved to hihtml-report.json'));
+    fs.rmSync(path.join(tempDir, 'hihtml-report.json'), { force: true });
+  });
 });
 
 // CLI: Check code (validate)
