@@ -30,7 +30,7 @@ Without options, hihtml validates HTML files and checks for deprecated markup in
 | `-o`, `--output <dir>` | Output directory for minification |
 | `-s`, `--settings <file>` | Load configuration from a specific JSON file (overrides CWD config lookup) |
 | `-q`, `--quiet` | Suppress output when no issues are found |
-| `-r`, `--report [file]` | Save a JSON report (default: `hihtml-report.json`) |
+| `-r`, `--report [file]` | Save a JSON report (default: hihtml-report.json) |
 | `-v`, `--version` | Show version number |
 | `-h`, `--help` | Show help |
 
