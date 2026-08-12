@@ -7,14 +7,14 @@
     "commander": "^15.0.0",
     "html-minifier-next": "^7.5.2",
     "html-validate": "^11.6.2",
-    "obsohtml": "^1.10.2"
+    "obsohtml": "^2.0.0"
   },
   "description": "The HTML supertool to validate, link-check, and minify web pages",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.1.2",
-    "eslint": "^10.8.0",
-    "globals": "^17.9.0",
+    "@types/node": "^26.2.0",
+    "eslint": "^10.8.1",
+    "globals": "^17.11.0",
     "typescript": "^7.0.2"
   },
   "exports": {
@@ -60,5 +60,5 @@
   },
   "type": "module",
   "types": "src/index.d.ts",
-  "version": "1.4.1"
+  "version": "1.5.0"
 }

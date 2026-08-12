@@ -28,7 +28,8 @@ program
   .option('-l, --check-links', 'check all external http/https URLs for broken references')
   .option('-m, --minify', 'minify HTML files (in-place unless `--output` is set)')
   .option('-a, --all', 'check HTML code and links, then minify if no validation errors (built-in conformance gate—different from using all individual flags together)')
-  .option('-i, --input <dir>', 'input directory', '.')
+  .argument('[dir]', 'input directory, or a single file (default: current directory)')
+  .option('-i, --input <dir>', 'input directory (alternative to the positional argument)', '.')
   .option('-o, --output <dir>', 'output directory for minification (default: same as input)')
   .option('-s, --settings <file>', 'load configuration from a specific JSON file (overrides CWD config lookup)')
   .option('-r, --report [file]', 'save JSON report (default filename: hihtml-report.json)')
@@ -41,6 +42,7 @@ Examples:
   npx hihtml -c -l             Check HTML code and links
   npx hihtml -m                Minify current directory in-place
   npx hihtml -a                Validate, check, check links, then minify if no validation errors
+  npx hihtml src               Check src/ for HTML code issues
   npx hihtml -i src -o dist    Minify src/ into dist/
   npx hihtml -s ~/my.json      Use a specific settings file
   npx hihtml -r                Save report to hihtml-report.json
@@ -50,6 +52,39 @@ Examples:
 program.parse(process.argv);
 
 const opts = program.opts();
+
+// @@ Consider dropping `--input` in favor of positional argument;
+// currently kept for symmetry with `--output`
+//
+// `--input` carries a default, so only its source tells an explicit `-i src`
+// apart from the fallback the positional is allowed to replace
+const [inputPositional] = program.args;
+if (inputPositional) {
+  // Resolved before comparing, so naming one path two ways (`src` and `./src`)
+  // isn’t mistaken for naming two
+  if (program.getOptionValueSource('input') !== 'default' && path.resolve(inputPositional) !== path.resolve(opts.input)) {
+    console.error(styleText('red', 'Cannot combine an input path with `--input`—pass one or the other'));
+    process.exit(1);
+  }
+  opts.input = inputPositional;
+}
+
+// The hint below is meant to be copied, so a path holding whitespace is quoted
+// to stay a single argument. Only whitespace triggers it: A Windows path is
+// full of characters an allowlist would flag, and quoting those would make the
+// hint harder to read for no gain.
+function shellQuote(value) {
+  return /\s/.test(value) ? `'${value.replaceAll("'", "'\\''")}'` : value;
+}
+
+// `--report` takes an optional value, so it swallows whatever follows it—and
+// with the input path as a positional, `hihtml -r src` is an easy slip.
+// Report files are JSON; anything else is the mistake.
+if (typeof opts.report === 'string' && !/\.json$/i.test(opts.report)) {
+  const hint = fs.existsSync(opts.report) ? `—did you mean \`hihtml ${shellQuote(opts.report)} -r\`?` : '';
+  console.error(styleText('red', `\`--report\` expects a \`.json\` filename, got \`${opts.report}\`${hint}`));
+  process.exit(1);
+}
 
 const isDefault = !opts.all && !opts.checkCode && !opts.minify && !opts.checkLinks;
 if (isDefault) opts.checkCode = true;

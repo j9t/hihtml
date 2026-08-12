@@ -18,7 +18,7 @@ npx hihtml
 
 #### Execution
 
-Without options, hihtml validates HTML files and checks for deprecated markup in the current directory. Use flags to control behavior:
+Without options, hihtml validates HTML files and checks for deprecated markup in the current directory. A directory (or file) can be passed as an argument—`npx hihtml src`—to check somewhere else. Use flags to control behavior:
 
 | Flag | Description |
 |---|---|
@@ -26,7 +26,7 @@ Without options, hihtml validates HTML files and checks for deprecated markup in
 | `-l`, `--check-links` | Check all external http/https URLs for broken references |
 | `-m`, `--minify` | Minify HTML files in-place, or to `--output` |
 | `-a`, `--all` | Check HTML code and links, then minify if there are no validation errors (built-in conformance gate—different from using all individual flags together) |
-| `-i`, `--input <dir>` | Input directory (default: current directory) |
+| `-i`, `--input <dir>` | Input directory (alternative to the positional argument; default: current directory) |
 | `-o`, `--output <dir>` | Output directory for minification |
 | `-s`, `--settings <file>` | Load configuration from a specific JSON file (overrides CWD config lookup) |
 | `-q`, `--quiet` | Suppress output when no issues are found |
@@ -45,7 +45,7 @@ npx hihtml
 Check a specific folder:
 
 ```shell
-npx hihtml -c -i path/to/project
+npx hihtml path/to/project
 ```
 
 Check all external http/https URLs in the current directory:
@@ -90,7 +90,10 @@ Save a JSON report:
 ```shell
 npx hihtml -r
 npx hihtml -r results.json
+npx hihtml src -r
 ```
+
+(Because `--report` takes an optional value, it claims whatever token follows it—so the directory goes before `-r`, not after it.)
 
 Run quietly (no output when clean, useful in CI):
 

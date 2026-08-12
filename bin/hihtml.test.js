@@ -170,6 +170,77 @@ describe('CLI flags', () => {
     const { stdout } = run(['-c', '-i', path.join(tempDir, 'clean.html')]);
     assert.ok(!stdout.includes('HTML code issues'));
   });
+
+  test('Accepts the input as a positional argument', () => {
+    const { stdout, status } = run(['-c', path.join(tempDir, 'deprecated.html')]);
+    assert.ok(stdout.includes('center'));
+    assert.strictEqual(status, 1);
+  });
+
+  test('Checks the working directory when no path is given', () => {
+    const { stdout } = run(['-c'], '', tempDir);
+    assert.ok(stdout.includes('center'));
+  });
+
+  test('Accepts a positional argument and `--input` naming the same directory two ways', () => {
+    const { stderr, status } = run(['-c', tempDir, '-i', `${tempDir}${path.sep}`]);
+    assert.ok(!stderr.includes('Cannot combine'), 'Same directory should not read as a conflict');
+    assert.strictEqual(status, 1, 'Exit reflects the findings, not a CLI error');
+  });
+
+  test('Rejects a positional argument combined with a differing `--input`', () => {
+    const { stderr, status } = run(['-c', tempDir, '-i', path.join(tempDir, 'clean.html')]);
+    assert.ok(stderr.includes('Cannot combine an input path with `--input`'));
+    assert.strictEqual(status, 1);
+  });
+
+  test('Rejects a `--report` value that is not a `.json` filename', () => {
+    const { stderr, status } = run(['-c', '-r', 'report.txt'], '', tempDir);
+    assert.ok(stderr.includes('`--report` expects a `.json` filename'));
+    assert.strictEqual(status, 1);
+  });
+
+  test('Suggests the positional form when `--report` swallowed an existing path', () => {
+    // `-r` takes an optional value, so `hihtml -r <dir>` would otherwise write
+    // the report over the directory the user meant to check
+    const { stderr, status } = run(['-c', '-r', tempDir]);
+    assert.ok(stderr.includes(`did you mean \`hihtml ${tempDir} -r\`?`));
+    assert.strictEqual(status, 1);
+  });
+
+  test('Quotes a swallowed path containing spaces, so the hint stays copyable', () => {
+    const dirSpaced = path.join(tempDir, 'my reports');
+    fs.mkdirSync(dirSpaced, { recursive: true });
+    try {
+      const { stderr, status } = run(['-c', '-r', dirSpaced]);
+      assert.ok(stderr.includes(`did you mean \`hihtml '${dirSpaced}' -r\`?`), stderr);
+      assert.strictEqual(status, 1);
+    } finally {
+      fs.rmSync(dirSpaced, { recursive: true, force: true });
+    }
+  });
+
+  test('Leaves a file `--report` swallowed untouched', () => {
+    const file = path.join(tempDir, 'clean.html');
+    const before = fs.readFileSync(file, 'utf8');
+    const { status } = run(['-c', '-r', file]);
+    assert.strictEqual(status, 1);
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), before);
+  });
+
+  test('Accepts `--report` with a `.json` filename, in any case', () => {
+    for (const name of ['results.json', 'RESULTS.JSON']) {
+      const { stdout } = run(['-c', name === 'results.json' ? '-r' : '--report', name], '', tempDir);
+      assert.ok(stdout.includes(`Report saved to ${name}`));
+      fs.rmSync(path.join(tempDir, name), { force: true });
+    }
+  });
+
+  test('Accepts `--report` without a value', () => {
+    const { stdout } = run(['-c', '-r'], '', tempDir);
+    assert.ok(stdout.includes('Report saved to hihtml-report.json'));
+    fs.rmSync(path.join(tempDir, 'hihtml-report.json'), { force: true });
+  });
 });
 
 // CLI: Check code (validate)
