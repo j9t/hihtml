@@ -190,7 +190,7 @@ describe('CLI flags', () => {
 
   test('Rejects a positional argument combined with a differing `--input`', () => {
     const { stderr, status } = run(['-c', tempDir, '-i', path.join(tempDir, 'clean.html')]);
-    assert.ok(stderr.includes('Cannot combine a directory argument with `--input`'));
+    assert.ok(stderr.includes('Cannot combine an input path with `--input`'));
     assert.strictEqual(status, 1);
   });
 
@@ -206,6 +206,18 @@ describe('CLI flags', () => {
     const { stderr, status } = run(['-c', '-r', tempDir]);
     assert.ok(stderr.includes(`did you mean \`hihtml ${tempDir} -r\`?`));
     assert.strictEqual(status, 1);
+  });
+
+  test('Quotes a swallowed path containing spaces, so the hint stays copyable', () => {
+    const dirSpaced = path.join(tempDir, 'my reports');
+    fs.mkdirSync(dirSpaced, { recursive: true });
+    try {
+      const { stderr, status } = run(['-c', '-r', dirSpaced]);
+      assert.ok(stderr.includes(`did you mean \`hihtml '${dirSpaced}' -r\`?`), stderr);
+      assert.strictEqual(status, 1);
+    } finally {
+      fs.rmSync(dirSpaced, { recursive: true, force: true });
+    }
   });
 
   test('Leaves a file `--report` swallowed untouched', () => {

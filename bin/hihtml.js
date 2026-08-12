@@ -60,20 +60,28 @@ const opts = program.opts();
 // apart from the fallback the positional is allowed to replace
 const [inputPositional] = program.args;
 if (inputPositional) {
-  // Resolved before comparing, so naming one directory two ways (`src` and
-  // `./src`) isn’t mistaken for naming two
+  // Resolved before comparing, so naming one path two ways (`src` and `./src`)
+  // isn’t mistaken for naming two
   if (program.getOptionValueSource('input') !== 'default' && path.resolve(inputPositional) !== path.resolve(opts.input)) {
-    console.error(styleText('red', 'Cannot combine a directory argument with `--input`—pass one or the other'));
+    console.error(styleText('red', 'Cannot combine an input path with `--input`—pass one or the other'));
     process.exit(1);
   }
   opts.input = inputPositional;
 }
 
+// The hint below is meant to be copied, so a path holding whitespace is quoted
+// to stay a single argument. Only whitespace triggers it: A Windows path is
+// full of characters an allowlist would flag, and quoting those would make the
+// hint harder to read for no gain.
+function shellQuote(value) {
+  return /\s/.test(value) ? `'${value.replaceAll("'", "'\\''")}'` : value;
+}
+
 // `--report` takes an optional value, so it swallows whatever follows it—and
-// with the input directory as a positional, `hihtml -r src` is an easy slip.
+// with the input path as a positional, `hihtml -r src` is an easy slip.
 // Report files are JSON; anything else is the mistake.
 if (typeof opts.report === 'string' && !/\.json$/i.test(opts.report)) {
-  const hint = fs.existsSync(opts.report) ? `—did you mean \`hihtml ${opts.report} -r\`?` : '';
+  const hint = fs.existsSync(opts.report) ? `—did you mean \`hihtml ${shellQuote(opts.report)} -r\`?` : '';
   console.error(styleText('red', `\`--report\` expects a \`.json\` filename, got \`${opts.report}\`${hint}`));
   process.exit(1);
 }
