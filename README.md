@@ -30,7 +30,7 @@ Without options, hihtml validates HTML files and checks for deprecated markup in
 | `-o`, `--output <dir>` | Output directory for minification |
 | `-s`, `--settings <file>` | Load configuration from a specific JSON file (overrides CWD config lookup) |
 | `-q`, `--quiet` | Suppress output when no issues are found |
-| `-r`, `--report [file]` | Save a JSON report (default: `hihtml-report.json`) |
+| `-r`, `--report [file]` | Save a JSON report (default: hihtml-report.json) |
 | `-v`, `--version` | Show version number |
 | `-h`, `--help` | Show help |
 
@@ -228,14 +228,14 @@ hihtml.config.json takes precedence over package.json when both are present.
 | Code | Meaning |
 |---|---|
 | `0` | No issues found (ObsoHTML warnings on deprecated markup are informational) |
-| `1` | Validation errors, broken links, or minification errors found |
-| `2` | Tool or runtime error |
+| `1` | Validation errors, broken links, or minification errors found—or an input hihtml can’t work with, like a path that isn’t there, a `--report` value that isn’t a `.json` filename, or an unusable setting |
+| `2` | A run that failed on its own, like a checker that couldn’t be loaded |
 
 ## FAQ
 
 ### How do I only run select checks?
 
-Use the individual flags (`-c`, `-l`, `-m`) instead of `--all`/`-a`. Each flag only exits “1” for issues within its own scope, so you control exactly what affects the exit code. To suppress specific HTML-validate rule IDs without disabling validation entirely, use `validation.ignore` in your configuration. To suppress specific broken links without skipping link checking altogether, use `links.ignore`.
+Use the individual flags (`-c`, `-l`, `-m`) instead of `--all`/`-a`. Each flag only exits `1` for issues within its own scope, so you control exactly what affects the exit code. To suppress specific HTML-validate rule IDs without disabling validation entirely, use `validation.ignore` in your configuration. To suppress specific broken links without skipping link checking altogether, use `links.ignore`.
 
 ### Where do I report issues?
 

@@ -5,6 +5,19 @@ import path from 'node:path';
 const CONFIG_FILES = ['hihtml.config.json', '.hihtml.json'];
 
 /**
+ * Marks a failure as the user’s to fix rather than a bug.
+ * @param {string} message
+ * @param {ErrorOptions} [options]
+ * @returns {Error}
+ */
+function setupError(message, options) {
+  const err = new Error(message, options);
+  // @ts-expect-error—marker read by the CLI
+  err.setupFailed = true;
+  return err;
+}
+
+/**
  * @param {unknown} config
  * @param {string} source
  * @returns {asserts config is import('./config.js').HihtmlConfig}
@@ -14,42 +27,42 @@ function validateConfig(config, source) {
   const isStringArray = (/** @type {unknown} */ v) => Array.isArray(v) && v.every(e => typeof e === 'string');
 
   if (c.extensions !== undefined && !isStringArray(c.extensions))
-    throw new Error(`${source}: \`extensions\` must be an array of strings`);
+    throw setupError(`${source}: \`extensions\` must be an array of strings`);
   if (c.ignore !== undefined && !isStringArray(c.ignore))
-    throw new Error(`${source}: \`ignore\` must be an array of strings`);
+    throw setupError(`${source}: \`ignore\` must be an array of strings`);
 
   if (c.validation !== undefined) {
     if (typeof c.validation !== 'object' || c.validation === null || Array.isArray(c.validation))
-      throw new Error(`${source}: \`validation\` must be an object`);
+      throw setupError(`${source}: \`validation\` must be an object`);
     const v = /** @type {Record<string, unknown>} */ (c.validation);
     if (v.preset !== undefined && typeof v.preset !== 'string')
-      throw new Error(`${source}: \`validation.preset\` must be a string`);
+      throw setupError(`${source}: \`validation.preset\` must be a string`);
     if (v.ignore !== undefined && !isStringArray(v.ignore))
-      throw new Error(`${source}: \`validation.ignore\` must be an array of strings`);
+      throw setupError(`${source}: \`validation.ignore\` must be an array of strings`);
   }
 
   if (c.links !== undefined) {
     if (typeof c.links !== 'object' || c.links === null || Array.isArray(c.links))
-      throw new Error(`${source}: \`links\` must be an object`);
+      throw setupError(`${source}: \`links\` must be an object`);
     const l = /** @type {Record<string, unknown>} */ (c.links);
     if (l.timeout !== undefined && (typeof l.timeout !== 'number' || l.timeout <= 0 || !Number.isFinite(l.timeout)))
-      throw new Error(`${source}: \`links.timeout\` must be a positive number`);
+      throw setupError(`${source}: \`links.timeout\` must be a positive number`);
     if (l.concurrency !== undefined && (!Number.isInteger(l.concurrency) || /** @type {number} */ (l.concurrency) < 1))
-      throw new Error(`${source}: \`links.concurrency\` must be a positive integer`);
+      throw setupError(`${source}: \`links.concurrency\` must be a positive integer`);
     if (l.warnOnPermanentRedirects !== undefined && typeof l.warnOnPermanentRedirects !== 'boolean')
-      throw new Error(`${source}: \`links.warnOnPermanentRedirects\` must be a boolean`);
+      throw setupError(`${source}: \`links.warnOnPermanentRedirects\` must be a boolean`);
     if (l.ignore !== undefined && !isStringArray(l.ignore))
-      throw new Error(`${source}: \`links.ignore\` must be an array of strings`);
+      throw setupError(`${source}: \`links.ignore\` must be an array of strings`);
   }
 
   if (c.minification !== undefined) {
     if (typeof c.minification !== 'object' || c.minification === null || Array.isArray(c.minification))
-      throw new Error(`${source}: \`minification\` must be an object`);
+      throw setupError(`${source}: \`minification\` must be an object`);
     const m = /** @type {Record<string, unknown>} */ (c.minification);
     if (m.preset !== undefined && typeof m.preset !== 'string')
-      throw new Error(`${source}: \`minification.preset\` must be a string`);
+      throw setupError(`${source}: \`minification.preset\` must be a string`);
     if (m.options !== undefined && (typeof m.options !== 'object' || m.options === null || Array.isArray(m.options)))
-      throw new Error(`${source}: \`minification.options\` must be an object`);
+      throw setupError(`${source}: \`minification.options\` must be an object`);
   }
 }
 
@@ -77,11 +90,11 @@ async function readConfigFile(cwd, fileName) {
     parsed = JSON.parse(content);
   } catch (err) {
     const nodeErr = /** @type {NodeJS.ErrnoException} */ (err);
-    if (nodeErr.code !== 'ENOENT') throw new Error(`Error reading ${fileName}: ${nodeErr.message}`, { cause: err });
+    if (nodeErr.code !== 'ENOENT') throw setupError(`Error reading ${fileName}: ${nodeErr.message}`, { cause: err });
     return undefined;
   }
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error(`${fileName} must contain a JSON object`);
+    throw setupError(`${fileName} must contain a JSON object`);
   }
   validateConfig(parsed, fileName);
   return parsed;
@@ -103,14 +116,14 @@ export async function loadConfig(cwd = process.cwd(), filePath = undefined) {
       const content = await fs.promises.readFile(resolved, 'utf8');
       parsed = JSON.parse(content);
     } catch (err) {
-      throw new Error(`Error reading settings file ${resolved}: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+      throw setupError(`Error reading settings file ${resolved}: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
     }
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error(`Settings file ${resolved} must contain a JSON object`);
+      throw setupError(`Settings file ${resolved} must contain a JSON object`);
     }
     if (parsed.hihtml !== undefined) {
       if (typeof parsed.hihtml !== 'object' || parsed.hihtml === null || Array.isArray(parsed.hihtml)) {
-        throw new Error(`\`hihtml\` key in ${resolved} must be a JSON object`);
+        throw setupError(`\`hihtml\` key in ${resolved} must be a JSON object`);
       }
       validateConfig(parsed.hihtml, resolved);
       return parsed.hihtml;
@@ -131,11 +144,11 @@ export async function loadConfig(cwd = process.cwd(), filePath = undefined) {
     pkg = JSON.parse(content);
   } catch (err) {
     const nodeErr = /** @type {NodeJS.ErrnoException} */ (err);
-    if (nodeErr.code !== 'ENOENT') throw new Error(`Error reading package.json: ${nodeErr.message}`, { cause: err });
+    if (nodeErr.code !== 'ENOENT') throw setupError(`Error reading package.json: ${nodeErr.message}`, { cause: err });
   }
   if (pkg?.hihtml !== undefined) {
     if (typeof pkg.hihtml !== 'object' || pkg.hihtml === null || Array.isArray(pkg.hihtml)) {
-      throw new Error('`hihtml` in package.json must be a JSON object');
+      throw setupError('`hihtml` in package.json must be a JSON object');
     }
     validateConfig(pkg.hihtml, 'package.json');
     return pkg.hihtml;
