@@ -5,8 +5,8 @@
   },
   "dependencies": {
     "commander": "^15.0.0",
-    "html-minifier-next": "^7.5.2",
-    "html-validate": "^11.6.2",
+    "html-minifier-next": "^8.1.0",
+    "html-validate": "^11.8.0",
     "obsohtml": "^2.0.0"
   },
   "description": "The HTML supertool to validate, link-check, and minify web pages",
@@ -60,5 +60,5 @@
   },
   "type": "module",
   "types": "src/index.d.ts",
-  "version": "1.6.0"
+  "version": "1.6.1"
 }
