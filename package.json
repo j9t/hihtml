@@ -6,14 +6,14 @@
   "dependencies": {
     "commander": "^15.0.0",
     "html-minifier-next": "^8.1.0",
-    "html-validate": "^11.8.0",
+    "html-validate": "^11.10.0",
     "obsohtml": "^2.0.0"
   },
   "description": "The HTML supertool to validate, link-check, and minify web pages",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.2.0",
-    "eslint": "^10.8.1",
+    "eslint": "^10.9.0",
     "globals": "^17.11.0",
     "typescript": "^7.0.2"
   },
