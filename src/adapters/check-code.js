@@ -58,7 +58,7 @@ async function checkDeprecated(filePaths, { concurrency = DEFAULT_CONCURRENCY, c
 /**
  * Validate HTML files and check for deprecated markup.
  * @param {string[]} filePaths
- * @param {{ preset?: string, ignore?: string[], concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [options]
+ * @param {{ preset?: string | string[], ignore?: string[], concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [options]
  * @returns {Promise<ResultCode>}
  */
 export async function checkCode(filePaths, { preset = 'standard', ignore = [], concurrency = DEFAULT_CONCURRENCY, contents, onProgress } = {}) {
@@ -75,7 +75,7 @@ const SYNTHETIC_PATH = '(string input)';
 /**
  * Validate an HTML string and check for deprecated markup.
  * @param {string} content
- * @param {{ preset?: string, ignore?: string[] }} [options]
+ * @param {{ preset?: string | string[], ignore?: string[] }} [options]
  * @returns {Promise<ResultCode>}
  */
 export async function checkCodeString(content, { preset = 'standard', ignore = [] } = {}) {

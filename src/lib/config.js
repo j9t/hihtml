@@ -10,7 +10,7 @@ const CONFIG_FILES = ['hihtml.config.json', '.hihtml.json'];
  * @param {ErrorOptions} [options]
  * @returns {Error}
  */
-function setupError(message, options) {
+export function setupError(message, options) {
   const err = new Error(message, options);
   // @ts-expect-error—marker read by the CLI
   err.setupFailed = true;
@@ -35,8 +35,8 @@ function validateConfig(config, source) {
     if (typeof c.validation !== 'object' || c.validation === null || Array.isArray(c.validation))
       throw setupError(`${source}: \`validation\` must be an object`);
     const v = /** @type {Record<string, unknown>} */ (c.validation);
-    if (v.preset !== undefined && typeof v.preset !== 'string')
-      throw setupError(`${source}: \`validation.preset\` must be a string`);
+    if (v.preset !== undefined && typeof v.preset !== 'string' && !(isStringArray(v.preset) && /** @type {string[]} */ (v.preset).length > 0))
+      throw setupError(`${source}: \`validation.preset\` must be a string or a non-empty array of strings`);
     if (v.ignore !== undefined && !isStringArray(v.ignore))
       throw setupError(`${source}: \`validation.ignore\` must be an array of strings`);
   }
@@ -70,7 +70,7 @@ function validateConfig(config, source) {
  * @typedef {Object} HihtmlConfig
  * @property {string[]} [extensions]
  * @property {string[]} [ignore]
- * @property {{ preset?: string, ignore?: string[] }} [validation]
+ * @property {{ preset?: string | string[], ignore?: string[] }} [validation]
  * @property {{ timeout?: number, concurrency?: number, warnOnPermanentRedirects?: boolean, ignore?: string[] }} [links]
  * @property {{ preset?: string, options?: Record<string, unknown> }} [minification]
  */
