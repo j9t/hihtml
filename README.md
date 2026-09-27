@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/hihtml.svg)](https://www.npmjs.com/package/hihtml) [![Build status](https://github.com/j9t/hihtml/workflows/Tests/badge.svg)](https://github.com/j9t/hihtml/actions) [![Socket](https://badge.socket.dev/npm/package/hihtml)](https://socket.dev/npm/package/hihtml) [![GitHub Sponsors](https://badgen.net/static/Support/Open%20Source/cyan)](https://github.com/sponsors/j9t)
 
-hihtml—“high-quality HTML”—bundles several key HTML tools into one, making HTML validation and semantics control, link checking, and minification as easy as it gets: [HTML-validate](https://html-validate.org/) for validation, [ObsoHTML](https://github.com/j9t/obsohtml) for deprecated markup detection, Node’s built-in `http`/`https` for link checking, and [HTML Minifier Next](https://github.com/j9t/html-minifier-next) for minification. hihtml provides a CLI and a programmatic API, and comes with strong defaults but is still highly configurable.
+hihtml—“high-quality HTML”—bundles several key HTML tools into one, making HTML validation and semantics control, link checking, and minification as easy as it gets: [HTML-validate](https://html-validate.org/) for validation, [ObsoHTML](https://github.com/j9t/obsohtml) for deprecated markup detection, Node’s built-in `http`/`https` for link checking, and [HTML Minifier Next (HMN)](https://github.com/j9t/html-minifier-next) for minification. hihtml provides a CLI and a programmatic API, and comes with strong defaults but is still highly configurable.
 
 ## Usage
 
@@ -140,14 +140,14 @@ Symlinked files whose target resolves within the scanned root are followed; syml
 
 Validates HTML files and checks for deprecated markup. Returns `Promise<ResultCode>` with `validation` (HTML-validate result) and `deprecation` (ObsoHTML result) properties.
 
-* `options.preset`: HTML-validate preset name (default: `'standard'`)
+* `options.preset`: HTML-validate preset name, or an array of names to combine (default: `'standard'`)
 * `options.ignore`: List of [HTML-validate rule IDs](https://html-validate.org/rules/index.html) to suppress (default: `[]`)
 
 #### `checkCodeString(content, options?)`
 
 Validates an HTML string and checks for deprecated markup. Returns `Promise<ResultCode>`—same shape as `checkCode`. Useful in content-pipeline contexts (Eleventy transforms, middleware, SSR) where HTML is available as a string rather than a file.
 
-* `options.preset`: HTML-validate preset name (default: `'standard'`)
+* `options.preset`: HTML-validate preset name, or an array of names to combine (default: `'standard'`)
 * `options.ignore`: List of HTML-validate rule IDs to suppress (default: `[]`)
 
 Note: `result.validation.files[0].path` and `result.deprecation.files[0].path` will be `'(string input)'`, not a real file path.
@@ -183,15 +183,15 @@ Note: `result.files[0].path` will be `'(string input)'`, not a real file path. `
 Minifies HTML files using HTML Minifier Next. Returns `Promise<ResultMinification>`.
 
 * `outputPaths`: Parallel array of output paths; pass the same value as `filePaths` for in-place minification
-* `options.preset`: HTML Minifier Next preset name (default: `'comprehensive'`)
-* `options.options`: Additional HTML Minifier Next options to merge with the preset
+* `options.preset`: HMN preset name (default: `'comprehensive'`)
+* `options.options`: Additional HMN options to merge with the preset
 
 #### `minifyString(content, options?)`
 
 Minifies an HTML string using HTML Minifier Next. Returns `Promise<string>`. Useful in content-pipeline contexts (Eleventy transforms, middleware, SSR) where HTML is available as a string rather than a file.
 
-* `options.preset`: HTML Minifier Next preset name (default: `'comprehensive'`)
-* `options.options`: Additional HTML Minifier Next options to merge with the preset
+* `options.preset`: HMN preset name (default: `'comprehensive'`)
+* `options.options`: Additional HMN options to merge with the preset
 
 #### `loadConfig(cwd?, filePath?)`
 
@@ -223,6 +223,8 @@ Create a hihtml.config.json file in your project root, or add a `"hihtml"` key t
 
 hihtml.config.json takes precedence over package.json when both are present.
 
+`validation.preset` takes one [HTML-validate preset](https://html-validate.org/rules/presets.html) or an array of presets to combine, like `["standard", "a11y"]`.
+
 ## Exit Codes
 
 | Code | Meaning |
@@ -236,6 +238,29 @@ hihtml.config.json takes precedence over package.json when both are present.
 ### How do I only run select checks?
 
 Use the individual flags (`-c`, `-l`, `-m`) instead of `--all`/`-a`. Each flag only exits `1` for issues within its own scope, so you control exactly what affects the exit code. To suppress specific HTML-validate rule IDs without disabling validation entirely, use `validation.ignore` in your configuration. To suppress specific broken links without skipping link checking altogether, use `links.ignore`.
+
+### Can hihtml check accessibility?
+
+Partly: HTML-validate comes with an `a11y` preset of accessibility rules, including several [WCAG techniques](https://www.w3.org/WAI/WCAG22/Techniques/#html). Combine it with standard validation via `"validation": { "preset": ["standard", "a11y"] }`, and suppress individual rules via `validation.ignore`. These checks only look at HTML—they’re neither a substitute for testing rendered pages with tools like [axe](https://github.com/dequelabs/axe-core) and [Pa11y](https://pa11y.org/), nor for manual testing.
+
+### Can hihtml format HTML?
+
+No, but it can clean up HTML while keeping its formatting. Formatters like [Prettier](https://prettier.io/) don’t handle omitted optional tags or unquoted attribute values, so for code that stays readable, run HTML Minifier Next without whitespace collapsing and without CSS, JavaScript, and SVG minification:
+
+```json
+{
+  "minification": {
+    "options": {
+      "collapseWhitespace": false,
+      "minifyCSS": false,
+      "minifyJS": false,
+      "minifySVG": false
+    }
+  }
+}
+```
+
+This overrides some options set with HMN’s `comprehensive` preset. The result keeps indentation and line breaks while still removing optional tags, attribute quotes, comments, and redundant attributes (see [HMN’s options](https://github.com/j9t/html-minifier-next#options-quick-reference) to fine-tune). Keep a copy of the originals, or use `--output`, as `--minify` works in-place.
 
 ### Where do I report issues?
 

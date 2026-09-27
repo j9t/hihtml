@@ -39,6 +39,8 @@ function run(args, stdinInput = '', cwd = undefined) {
 const HTML_CLEAN = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p>Yes</p></body></html>';
 const HTML_DEPRECATED = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><center>Not anymore</center></body></html>';
 const HTML_INVALID = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p><div>No</div></p></body></html>';
+// `close-order` is only in the standard preset, `empty-heading` only in the a11y preset
+const HTML_INVALID_A11Y = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><h1></h1><p><div>No</div></p></body></html>';
 
 /** @type {http.Server} */
 let testServer;
@@ -456,6 +458,18 @@ describe('CLI `--minify`', () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 
+  test('Exits `1` on an unknown `minification.preset`', () => {
+    const outDir = path.join(tempDir, 'minify_unknown_preset_out');
+    const settingsPath = path.join(tempDir, 'cli-settings-unknown-minify-preset.json');
+    fs.writeFileSync(settingsPath, JSON.stringify({ minification: { preset: 'nope' } }));
+    const { stderr, status } = run(['-m', '-i', path.join(tempDir, 'clean.html'), '-o', outDir, '-s', settingsPath]);
+    assert.strictEqual(status, 1);
+    assert.ok(stderr.includes('nope'));
+    assert.ok(!fs.existsSync(path.join(outDir, 'clean.html')));
+    fs.rmSync(outDir, { recursive: true, force: true });
+    fs.unlinkSync(settingsPath);
+  });
+
   test('Output file is not larger than input', () => {
     const outDir = path.join(tempDir, 'minify_out3');
     run(['-m', '-i', path.join(tempDir, 'clean.html'), '-o', outDir]);
@@ -577,6 +591,32 @@ describe('CLI `--settings`', () => {
     fs.writeFileSync(settingsPath, JSON.stringify({}));
     const { status } = run(['-c', '-i', path.join(tempDir, 'clean.html'), '-s', settingsPath]);
     assert.strictEqual(status, 0);
+    fs.unlinkSync(settingsPath);
+  });
+
+  test('Applies multiple validation presets from a settings file', () => {
+    const srcDir = path.join(tempDir, 'cli-settings-presets');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'page.html'), HTML_INVALID_A11Y);
+
+    const settingsPath = path.join(tempDir, 'cli-settings-presets.json');
+    fs.writeFileSync(settingsPath, JSON.stringify({ validation: { preset: ['standard', 'a11y'] } }));
+
+    const { stdout, status } = run(['-c', '-i', srcDir, '-s', settingsPath]);
+    assert.strictEqual(status, 1);
+    assert.ok(stdout.includes('close-order'));
+    assert.ok(stdout.includes('empty-heading'));
+
+    fs.rmSync(srcDir, { recursive: true, force: true });
+    fs.unlinkSync(settingsPath);
+  });
+
+  test('Exits `1` on an unknown `validation.preset`', () => {
+    const settingsPath = path.join(tempDir, 'cli-settings-unknown-preset.json');
+    fs.writeFileSync(settingsPath, JSON.stringify({ validation: { preset: ['standard', 'nope'] } }));
+    const { stderr, status } = run(['-c', '-i', path.join(tempDir, 'clean.html'), '-s', settingsPath]);
+    assert.strictEqual(status, 1);
+    assert.ok(stderr.includes('nope'));
     fs.unlinkSync(settingsPath);
   });
 
@@ -779,6 +819,36 @@ describe('Validate files', () => {
     assert.ok(result.files[0].messages.every(m => m.ignored === true));
   });
 
+  test('Combines multiple presets', async () => {
+    const contents = new Map([['page.html', HTML_INVALID_A11Y]]);
+    const ruleIds = async (preset) => (await validate(['page.html'], { preset, contents })).files[0].messages.map(m => m.ruleId);
+
+    const standard = await ruleIds('standard');
+    const a11y = await ruleIds('a11y');
+    const combined = await ruleIds(['standard', 'a11y']);
+
+    assert.ok(standard.includes('close-order') && !standard.includes('empty-heading'));
+    assert.ok(a11y.includes('empty-heading') && !a11y.includes('close-order'));
+    assert.ok(combined.includes('close-order'));
+    assert.ok(combined.includes('empty-heading'));
+  });
+
+  test('Treats a single-preset array like a preset string', async () => {
+    const contents = new Map([['page.html', HTML_INVALID_A11Y]]);
+    const fromString = await validate(['page.html'], { preset: 'a11y', contents });
+    const fromArray = await validate(['page.html'], { preset: ['a11y'], contents });
+    assert.deepStrictEqual(fromArray, fromString);
+  });
+
+  test('Rejects an unknown preset', async () => {
+    await assert.rejects(() => validate([fileClean], { preset: 'nope' }), /Unknown HTML-validate preset `nope`/);
+    await assert.rejects(() => validate([fileClean], { preset: ['standard', 'nope'] }), /Unknown HTML-validate preset `nope`/);
+  });
+
+  test('Rejects an empty preset array', async () => {
+    await assert.rejects(() => validate([fileClean], { preset: [] }), /preset/);
+  });
+
   test('Non-matching ignore list does not suppress errors', async () => {
     const base = await validate([fileInvalid]);
     const result = await validate([fileInvalid], { ignore: ['no-such-rule'] });
@@ -859,6 +929,13 @@ describe('Check code string', () => {
   test('Detects validation errors', async () => {
     const result = await checkCodeString(HTML_INVALID);
     assert.ok(result.validation.countErrors > 0);
+  });
+
+  test('Passes multiple presets through to validation', async () => {
+    const result = await checkCodeString(HTML_INVALID_A11Y, { preset: ['standard', 'a11y'] });
+    const ruleIds = result.validation.files[0].messages.map(m => m.ruleId);
+    assert.ok(ruleIds.includes('close-order'));
+    assert.ok(ruleIds.includes('empty-heading'));
   });
 
   test('Passes ignore list through to validation result', async () => {
@@ -1188,6 +1265,12 @@ describe('Minify files', () => {
     fs.unlinkSync(outPath);
   });
 
+  test('Rejects an unknown preset', async () => {
+    const outPath = path.join(tempDir, 'minify_unknown_preset_out.html');
+    await assert.rejects(() => minify([fileClean], [outPath], { preset: 'nope' }), /Unknown HTML Minifier Next preset `nope`/);
+    assert.ok(!fs.existsSync(outPath));
+  });
+
   test('Overriding `collapseWhitespace: false` preserves whitespace', async () => {
     const filePath = path.join(tempDir, 'whitespace.html');
     const outPath = path.join(tempDir, 'whitespace_override_out.html');
@@ -1211,6 +1294,15 @@ describe('Minify string', () => {
   test('Output is not larger than input', async () => {
     const result = await minifyString(HTML_CLEAN);
     assert.ok(Buffer.byteLength(result) <= Buffer.byteLength(HTML_CLEAN));
+  });
+
+  test('Rejects an unknown preset', async () => {
+    await assert.rejects(() => minifyString(HTML_CLEAN, { preset: 'nope' }), /Unknown HTML Minifier Next preset `nope`/);
+  });
+
+  test('Accepts a known preset', async () => {
+    const result = await minifyString(HTML_CLEAN, { preset: 'conservative' });
+    assert.strictEqual(typeof result, 'string');
   });
 
   test('Collapses whitespace with default preset', async () => {
@@ -1492,11 +1584,36 @@ describe('Load config', () => {
     fs.rmSync(configDir, { recursive: true, force: true });
   });
 
+  test('Accepts an array for `validation.preset`', async () => {
+    const configDir = path.join(tempDir, 'array-preset');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, 'hihtml.config.json'), JSON.stringify({ validation: { preset: ['standard', 'a11y'] } }));
+    const config = await loadConfig(configDir);
+    assert.deepStrictEqual(config.validation?.preset, ['standard', 'a11y']);
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
+
+  test('Throws on an empty `validation.preset` array', async () => {
+    const configDir = path.join(tempDir, 'empty-preset');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, '.hihtml.json'), JSON.stringify({ validation: { preset: [] } }));
+    await assert.rejects(() => loadConfig(configDir), /validation\.preset.*must be a string or a non-empty array of strings/);
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
+
+  test('Throws on a `validation.preset` array with non-strings', async () => {
+    const configDir = path.join(tempDir, 'mixed-preset');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, '.hihtml.json'), JSON.stringify({ validation: { preset: ['standard', 42] } }));
+    await assert.rejects(() => loadConfig(configDir), /validation\.preset.*must be a string or a non-empty array of strings/);
+    fs.rmSync(configDir, { recursive: true, force: true });
+  });
+
   test('Throws on invalid `validation.preset` type', async () => {
     const configDir = path.join(tempDir, 'badtype-preset');
     fs.mkdirSync(configDir, { recursive: true });
     fs.writeFileSync(path.join(configDir, '.hihtml.json'), JSON.stringify({ validation: { preset: 42 } }));
-    await assert.rejects(() => loadConfig(configDir), /validation\.preset.*must be a string/);
+    await assert.rejects(() => loadConfig(configDir), /validation\.preset.*must be a string or a non-empty array of strings/);
     fs.rmSync(configDir, { recursive: true, force: true });
   });
 });

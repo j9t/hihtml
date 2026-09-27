@@ -79,7 +79,7 @@ export interface ResultMinification {
 export interface HihtmlConfig {
   extensions?: string[];
   ignore?: string[];
-  validation?: { preset?: string; ignore?: string[] };
+  validation?: { preset?: string | string[]; ignore?: string[] };
   minification?: { preset?: string; options?: Record<string, unknown> };
   links?: {
     timeout?: number;
@@ -104,12 +104,12 @@ export declare function loadConfig(cwd?: string, filePath?: string): Promise<Hih
 
 export declare function checkCode(
   filePaths: string[],
-  options?: { preset?: string; ignore?: string[]; concurrency?: number; contents?: Map<string, string>; onProgress?: () => void }
+  options?: { preset?: string | string[]; ignore?: string[]; concurrency?: number; contents?: Map<string, string>; onProgress?: () => void }
 ): Promise<ResultCode>;
 
 export declare function checkCodeString(
   content: string,
-  options?: { preset?: string; ignore?: string[] }
+  options?: { preset?: string | string[]; ignore?: string[] }
 ): Promise<ResultCode>;
 
 export declare function checkLinks(

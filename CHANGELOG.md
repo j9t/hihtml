@@ -4,6 +4,18 @@ All notable changes to hihtml are documented in this file, which is (mostly) AI-
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-09-27
+
+### Fixed
+
+* Ensured to fail with a message and exit `1` on an unknown `minification.preset`, which HTML Minifier Next had silently ignored, leaving files barely minified
+* Ensured an unknown `validation.preset` exits `1` as an unusable setting, instead of exiting `2` with an error on the first file
+
+### Added
+
+* Added support for combining HTML-validate presets, e.g., `"validation": { "preset": ["standard", "a11y"] }`, to check accessibility along with standard validation
+* Documented accessibility checking and formatting-preserving clean-up in README
+
 ## [1.6.2] - 2026-09-24
 
 ### Changed

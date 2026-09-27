@@ -60,5 +60,5 @@
   },
   "type": "module",
   "types": "src/index.d.ts",
-  "version": "1.6.2"
+  "version": "1.7.0"
 }

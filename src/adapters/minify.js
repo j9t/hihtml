@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
+import { setupError } from '../lib/config.js';
 
 /**
  * @typedef {Object} ResultMinificationFile
@@ -28,13 +29,18 @@ const minifierCache = new Map();
  */
 async function loadMinifier(preset, options) {
   if (!minifierCache.has(preset)) {
-    minifierCache.set(preset, (async () => {
-      let htmlMinify, getPreset;
+    const promise = (async () => {
+      let htmlMinify, getPreset, getPresetNames;
       try {
-        ({ minify: htmlMinify, getPreset } = await import('html-minifier-next'));
+        ({ minify: htmlMinify, getPreset, getPresetNames } = await import('html-minifier-next'));
       } catch {
         throw new Error('Could not load HTML Minifier Next. Ensure it is installed and check for breaking API changes.');
       }
+      // Skipped if HMN stops exposing its preset names
+      const presetsKnown = typeof getPresetNames === 'function' ? getPresetNames() : undefined;
+      if (presetsKnown && !presetsKnown.includes(preset))
+        throw setupError(`Unknown HTML Minifier Next preset \`${preset}\` (available: ${presetsKnown.join(', ')})`);
+
       let presetOptions;
       try {
         presetOptions = /** @type {Record<string, unknown>} */ (getPreset(preset) ?? {});
@@ -42,7 +48,9 @@ async function loadMinifier(preset, options) {
         throw new Error(`HTML Minifier Next API error—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
       }
       return { htmlMinify, presetOptions };
-    })());
+    })();
+    promise.catch(() => minifierCache.delete(preset));
+    minifierCache.set(preset, promise);
   }
   const { htmlMinify, presetOptions } = await /** @type {Promise<{ htmlMinify: Function, presetOptions: Record<string, unknown> }>} */ (minifierCache.get(preset));
   return { htmlMinify, resolvedOptions: { ...presetOptions, ...options } };
