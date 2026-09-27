@@ -245,7 +245,7 @@ Partly: HTML-validate comes with an `a11y` preset of accessibility rules, includ
 
 ### Can hihtml format HTML?
 
-No, but it can clean up HTML while keeping its formatting. Formatters like [Prettier](https://prettier.io/) don’t handle omitted optional tags or unquoted attribute values, so for code that stays readable, run HTML Minifier Next without whitespace collapsing and without CSS, JavaScript, and SVG minification:
+No, but it can clean up HTML while keeping its formatting. Formatters like [Prettier](https://prettier.io/) don’t preserve omitted optional tags or unquoted attribute values, so for code that stays readable, run HTML Minifier Next without whitespace collapsing and without CSS, JavaScript, and SVG minification:
 
 ```json
 {
