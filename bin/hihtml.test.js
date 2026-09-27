@@ -845,6 +845,11 @@ describe('Validate files', () => {
     await assert.rejects(() => validate([fileClean], { preset: ['standard', 'nope'] }), /Unknown HTML-validate preset `nope`/);
   });
 
+  test('Distinguishes a preset list from a preset name with a comma', async () => {
+    await validate([fileClean], { preset: ['standard', 'a11y'] });
+    await assert.rejects(() => validate([fileClean], { preset: 'standard,a11y' }), /Unknown HTML-validate preset `standard,a11y`/);
+  });
+
   test('Rejects an empty preset array', async () => {
     await assert.rejects(() => validate([fileClean], { preset: [] }), /preset/);
   });
@@ -1303,6 +1308,11 @@ describe('Minify string', () => {
   test('Accepts a known preset', async () => {
     const result = await minifyString(HTML_CLEAN, { preset: 'conservative' });
     assert.strictEqual(typeof result, 'string');
+  });
+
+  test('Accepts a preset name regardless of case', async () => {
+    const result = await minifyString('<p>  Hello   world  </p>', { preset: 'COMPREHENSIVE' });
+    assert.ok(!result.includes('  Hello'));
   });
 
   test('Collapses whitespace with default preset', async () => {

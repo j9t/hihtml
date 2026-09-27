@@ -36,9 +36,9 @@ async function loadMinifier(preset, options) {
       } catch {
         throw new Error('Could not load HTML Minifier Next. Ensure it is installed and check for breaking API changes.');
       }
-      // Skipped if HMN stops exposing its preset names
+      // Skipped if HMN stops exposing its preset names; lowercased as HMN matches names case-insensitively
       const presetsKnown = typeof getPresetNames === 'function' ? getPresetNames() : undefined;
-      if (presetsKnown && !presetsKnown.includes(preset))
+      if (presetsKnown && !presetsKnown.includes(preset.toLowerCase()))
         throw setupError(`Unknown HTML Minifier Next preset \`${preset}\` (available: ${presetsKnown.join(', ')})`);
 
       let presetOptions;

@@ -39,7 +39,7 @@ const validatorCache = new Map();
  * @returns {Promise<import('html-validate').HtmlValidate>}
  */
 function getValidator(presets) {
-  const key = presets.join(',');
+  const key = JSON.stringify(presets);
   if (validatorCache.has(key)) return /** @type {Promise<import('html-validate').HtmlValidate>} */ (validatorCache.get(key));
 
   const promise = (async () => {
