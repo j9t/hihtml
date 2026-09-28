@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 
 * Added support for combining HTML-validate presets, e.g., `"validation": { "preset": ["standard", "a11y"] }`, to check accessibility along with standard validation
-* Documented accessibility checking and formatting-preserving clean-up in README
+* Documented accessibility checking and formatting-preserving cleanup in README
 
 ## [1.6.2] - 2026-09-24
 
