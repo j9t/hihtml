@@ -6,7 +6,7 @@
   "dependencies": {
     "commander": "^15.0.0",
     "html-minifier-next": "^8.6.0",
-    "html-validate": "^11.16.0",
+    "html-validate": "^11.16.1",
     "obsohtml": "^2.0.0"
   },
   "description": "The HTML supertool to validate, link-check, and minify web pages",
