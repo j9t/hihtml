@@ -5,14 +5,14 @@
   },
   "dependencies": {
     "commander": "^15.0.0",
-    "html-minifier-next": "^8.6.0",
-    "html-validate": "^11.16.1",
+    "html-minifier-next": "^8.10.4",
+    "html-validate": "^11.16.2",
     "obsohtml": "^2.0.0"
   },
   "description": "The HTML supertool to validate, link-check, and minify web pages",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.6.3",
+    "@types/node": "^26.6.4",
     "eslint": "^10.11.0",
     "globals": "^17.12.0",
     "typescript": "^7.0.2"
