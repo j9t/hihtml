@@ -91,7 +91,7 @@ function requestSingle(url, method, timeout) {
         port: parsed.port || undefined,
         path: (parsed.pathname || '/') + parsed.search,
         method,
-        headers: { 'User-Agent': USER_AGENT },
+        headers: { 'User-Agent': USER_AGENT, 'Accept': '*/*' },
         signal: AbortSignal.timeout(timeout),
       },
       res => {

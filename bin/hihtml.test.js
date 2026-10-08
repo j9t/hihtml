@@ -75,6 +75,8 @@ before(async () => {
           if (req.method === 'HEAD') { res.writeHead(405); res.end(); }
           else { res.writeHead(200); res.end(); }
           break;
+        case '/requires-accept':
+          res.writeHead(req.headers.accept ? 200 : 403); res.end(); break;
         case "/you_aren't_gonna_need_it":
           res.writeHead(200); res.end(); break;
         case '/slow':
@@ -996,6 +998,15 @@ describe('Check links', () => {
     const result = await checkLinks([path.join(tempDir, 'links_head_not_allowed.html')]);
     assert.strictEqual(result.countBroken, 0);
     assert.strictEqual(result.files[0].links[0].ok, true);
+    assert.strictEqual(result.files[0].links[0].status, 200);
+  });
+
+  test('Sends an Accept header for servers that reject requests without one', async () => {
+    const acceptFile = path.join(tempDir, 'links_requires_accept.html');
+    fs.writeFileSync(acceptFile,
+      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="${testServerBase}/requires-accept">Accept</a></body></html>`);
+    const result = await checkLinks([acceptFile]);
+    assert.strictEqual(result.countBroken, 0);
     assert.strictEqual(result.files[0].links[0].status, 200);
   });
 
