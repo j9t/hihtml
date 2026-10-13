@@ -113,6 +113,8 @@ before(async () => {
   // (`spawnSync` blocks the parent event loop, so we can’t use the live test server in CLI tests)
   fs.writeFileSync(path.join(tempDir, 'links_refused.html'),
     `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="http://127.0.0.1:1/broken">Broken</a></body></html>`);
+  fs.writeFileSync(path.join(tempDir, 'links_fragment.html'),
+    `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="#foo">Foo</a>\n<a href="#bar">Bar</a><p id="foo"></p></body></html>`);
 });
 
 after(async () => {
@@ -319,6 +321,14 @@ describe('CLI `--check-code`', () => {
     assert.ok(stdout.includes('center'));
   });
 
+  test('Reports lines of deprecated markup', () => {
+    const file = path.join(tempDir, 'deprecated_lines.html');
+    fs.writeFileSync(file, '<!DOCTYPE html>\n<html lang="en">\n<title>T</title>\n<center>A</center>\n<center>B</center>');
+    const { stdout } = run(['-c', '-i', file]);
+    assert.ok(stdout.includes('Lines 4, 5: Deprecated element: <center>'));
+    fs.unlinkSync(file);
+  });
+
   test('Exits `1` when deprecated markup is found', () => {
     const { status } = run(['-c', '-i', path.join(tempDir, 'deprecated.html')]);
     assert.strictEqual(status, 1);
@@ -434,6 +444,18 @@ describe('CLI `--check-links`', () => {
     const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
     assert.strictEqual(report.command, 'check-code+check-links');
     fs.unlinkSync(reportPath);
+  });
+
+  test('Reports missing fragment targets with line numbers and exits `0`', () => {
+    const { stdout, status } = run(['-l', '-i', path.join(tempDir, 'links_fragment.html')]);
+    assert.ok(stdout.includes('1 missing fragment target'));
+    assert.ok(stdout.includes('Line 2: #bar'));
+    assert.strictEqual(status, 0);
+  });
+
+  test('Reports line numbers for broken links', () => {
+    const { stdout } = run(['-l', '-i', path.join(tempDir, 'links_refused.html')]);
+    assert.ok(stdout.includes('Line 1: http://127.0.0.1:1/broken'));
   });
 
   test('Does not number section when only one check is shown', () => {
@@ -748,6 +770,12 @@ describe('CLI `--quiet`', () => {
     assert.strictEqual(status, 1);
   });
 
+  test('Shows missing fragment targets and exits "0"', () => {
+    const { stdout, status } = run(['-q', '-l', '-i', path.join(tempDir, 'links_fragment.html')]);
+    assert.ok(stdout.includes('1 missing fragment target'));
+    assert.strictEqual(status, 0);
+  });
+
   test('Produces no STDOUT for clean minification', () => {
     const outDir = path.join(tempDir, 'quiet_minify_out');
     const { stdout, status } = run(['-q', '-m', '-i', path.join(tempDir, 'clean.html'), '-o', outDir]);
@@ -931,6 +959,22 @@ describe('Check code string', () => {
     const result = await checkCodeString(HTML_DEPRECATED);
     assert.ok(result.deprecation.countIssues > 0);
     assert.ok(result.deprecation.files[0].elements.includes('center'));
+  });
+
+  test('Locates each occurrence of deprecated markup', async () => {
+    const result = await checkCodeString('<!DOCTYPE html>\n<title>T</title>\n<font>A</font>\n<p><font>B</font>\n<img src=x.png alt="" align=left>');
+    const file = result.deprecation.files[0];
+    assert.deepStrictEqual(file.elements, ['font']);
+    assert.deepStrictEqual(file.attributes, ['align']);
+    assert.deepStrictEqual(file.locations, {
+      elements: [{ name: 'font', line: 3, col: 1 }, { name: 'font', line: 4, col: 4 }],
+      attributes: [{ name: 'align', line: 5, col: 23 }],
+    });
+  });
+
+  test('Counts deprecated markup by name, not by occurrence', async () => {
+    const result = await checkCodeString('<font>A</font><font>B</font>');
+    assert.strictEqual(result.deprecation.countIssues, 1);
   });
 
   test('Detects validation errors', async () => {
@@ -1215,6 +1259,186 @@ describe('URL extraction', () => {
 
   test('Does not check URLs inside `<style>` body', async () => {
     assert.deepStrictEqual(await found(`<style>a::before { content: "${ok()}"; }</style>`), { checked: 0, broken: 0 });
+  });
+});
+
+// Programmatic API: line numbers
+
+describe('Link line numbers', () => {
+  test('Reports the line of each link', async () => {
+    const result = await checkLinksString(`<!DOCTYPE html>\n<title>T</title>\n<a href="${testServerBase}/ok">OK</a>\n<a href="${testServerBase}/not-found">Broken</a>`);
+    const byUrl = Object.fromEntries(result.files[0].links.map(l => [l.url, l.lines]));
+    assert.deepStrictEqual(byUrl[`${testServerBase}/ok`], [3]);
+    assert.deepStrictEqual(byUrl[`${testServerBase}/not-found`], [4]);
+  });
+
+  test('Reports every line a URL appears on', async () => {
+    const result = await checkLinksString(`<a href="${testServerBase}/ok">1</a>\n<p>\n<img src="${testServerBase}/ok">`);
+    assert.strictEqual(result.files[0].links.length, 1);
+    assert.deepStrictEqual(result.files[0].links[0].lines, [1, 3]);
+  });
+
+  test('Counts lines inside stripped comments, scripts, and styles', async () => {
+    const result = await checkLinksString(`<!--\n\n-->\n<script>\n\n</script>\n<style>\n</style>\n<a href="${testServerBase}/ok">OK</a>`);
+    assert.deepStrictEqual(result.files[0].links[0].lines, [9]);
+  });
+
+  test('Reports the line of each candidate in a multiline `srcset`', async () => {
+    const result = await checkLinksString(`<img\n  srcset="${testServerBase}/ok 1x,\n          ${testServerBase}/not-found 2x">`);
+    const byUrl = Object.fromEntries(result.files[0].links.map(l => [l.url, l.lines]));
+    assert.deepStrictEqual(byUrl[`${testServerBase}/ok`], [2]);
+    assert.deepStrictEqual(byUrl[`${testServerBase}/not-found`], [3]);
+  });
+
+  test('Reports lines for skipped URLs', async () => {
+    const result = await checkLinksString(`<p>\n<a href="${testServerBase}/ok">OK</a>`, { ignore: ['127.0.0.1'] });
+    assert.deepStrictEqual(result.files[0].links[0].lines, [2]);
+  });
+});
+
+// Programmatic API: fragment links
+
+describe('Fragment links', () => {
+  const missing = async (html, options) => {
+    const r = await checkLinksString(html, options);
+    return r.files[0].fragmentsMissing.map(f => f.fragment);
+  };
+
+  test('Reports fragment without matching ID (issue #57)', async () => {
+    const result = await checkLinksString('<!doctype html>\n<title>Test</title>\n<a href=#foo>Foo</a>\n<a href=#bar>Bar</a\t>\n<p id=foo>\n<p id=baar>');
+    assert.deepStrictEqual(result.files[0].fragmentsMissing, [{ fragment: '#bar', lines: [4] }]);
+    assert.strictEqual(result.countFragmentsChecked, 2);
+    assert.strictEqual(result.countFragmentsMissing, 1);
+  });
+
+  test('Does not count missing fragments as broken', async () => {
+    const result = await checkLinksString('<a href="#nope">Nope</a>');
+    assert.strictEqual(result.countBroken, 0);
+    assert.strictEqual(result.files[0].countBroken, 0);
+  });
+
+  test('Reports every line a missing fragment appears on', async () => {
+    const result = await checkLinksString('<a href="#nope">1</a>\n<a href="#nope">2</a>');
+    assert.deepStrictEqual(result.files[0].fragmentsMissing, [{ fragment: '#nope', lines: [1, 2] }]);
+  });
+
+  test('Accepts IDs with any quoting', async () => {
+    assert.deepStrictEqual(await missing(`<a href="#a">A</a><a href='#b'>B</a><a href=#c>C</a><p id="a"><p id='b'><p id=c>`), []);
+  });
+
+  test('Accepts IDs on any element, including SVG', async () => {
+    assert.deepStrictEqual(await missing('<a href="#icon">I</a><svg><symbol id="icon"></symbol><use href="#icon"></use></svg>'), []);
+  });
+
+  test('Accepts `name` on `a` elements', async () => {
+    assert.deepStrictEqual(await missing('<a href="#old">Old</a><a name="old"></a>'), []);
+  });
+
+  test('Rejects `name` on other elements', async () => {
+    assert.deepStrictEqual(await missing('<a href="#field">Field</a><input name="field">'), ['#field']);
+  });
+
+  test('Rejects attributes merely ending in “id”', async () => {
+    assert.deepStrictEqual(await missing('<a href="#x">X</a><p data-id="x"><p aria-describedby="x">'), ['#x']);
+  });
+
+  test('Matches IDs case-sensitively', async () => {
+    assert.deepStrictEqual(await missing('<a href="#Foo">Foo</a><p id="foo">'), ['#Foo']);
+  });
+
+  test('Accepts `#` and `#top`', async () => {
+    assert.deepStrictEqual(await missing('<a href="#">Top</a><a href="#top">Top</a><a href="#TOP">Top</a>'), []);
+  });
+
+  test('Prefers an element with ID `top` over the top of the document', async () => {
+    assert.deepStrictEqual(await missing('<a href="#top">Top</a><p id="top">'), []);
+  });
+
+  test('Matches percent-encoded fragments', async () => {
+    assert.deepStrictEqual(await missing('<a href="#caf%C3%A9">Café</a><p id="café">'), []);
+  });
+
+  test('Tolerates malformed percent-encoding', async () => {
+    assert.deepStrictEqual(await missing('<a href="#100%">100%</a><p id="100%">'), []);
+  });
+
+  test('Ignores text fragments', async () => {
+    assert.deepStrictEqual(await missing('<a href="#:~:text=hello">Hello</a>'), []);
+  });
+
+  test('Checks the element part of a fragment with a text directive', async () => {
+    assert.deepStrictEqual(await missing('<a href="#foo:~:text=hello">Hello</a><p id="foo">'), []);
+    assert.deepStrictEqual(await missing('<a href="#bar:~:text=hello">Hello</a><p id="foo">'), ['#bar:~:text=hello']);
+  });
+
+  test('Ignores links to other documents', async () => {
+    assert.deepStrictEqual(await missing(`<a href="page.html#x">X</a><a href="/#x">X</a><a href="${testServerBase}/ok#x">X</a>`), []);
+  });
+
+  test('Skips fragment checks when `base` sets a URL', async () => {
+    assert.deepStrictEqual(await missing('<base href="https://example.com/"><a href="#x">X</a>'), []);
+  });
+
+  test('Ignores fragments inside comments, scripts, and styles', async () => {
+    assert.deepStrictEqual(await missing('<!-- <a href="#x">X</a> --><script>"<a href=\'#y\'>"</script><style>/* href="#z" */</style>'), []);
+  });
+
+  test('Ignores IDs inside comments', async () => {
+    assert.deepStrictEqual(await missing('<a href="#x">X</a><!-- <p id="x"> -->'), ['#x']);
+  });
+
+  test('Handles `>` inside quoted attribute values', async () => {
+    assert.deepStrictEqual(await missing('<a title="a > b" href="#x">X</a><p data-note="1 > 0" id="x">'), []);
+  });
+
+  test('Handles quotes inside unquoted attribute values', async () => {
+    assert.deepStrictEqual(await missing('<a title=Don\'t href=#nope>X</a>'), ['#nope']);
+    assert.deepStrictEqual(await missing('<a href=#x>X</a><p title=It\'s id=x>'), []);
+  });
+
+  test('Decodes character references in fragments and targets', async () => {
+    assert.deepStrictEqual(await missing('<a href="#a&amp;b">X</a><p id="a&b">'), []);
+    assert.deepStrictEqual(await missing('<a href="#caf&eacute;">X</a><p id="café">'), []);
+    assert.deepStrictEqual(await missing('<a href="#&#x41;">X</a><p id="A">'), []);
+    assert.deepStrictEqual(await missing('<a href="#x">X</a><p id="&#120;">'), []);
+    assert.deepStrictEqual(await missing('<a href="#old">X</a><a name="&#111;ld"></a>'), []);
+  });
+
+  test('Treats a fragment written as a character reference as a fragment link', async () => {
+    assert.deepStrictEqual(await missing('<a href="&#35;nope">X</a>'), ['&#35;nope']);
+  });
+
+  test('Reports missing fragments as written', async () => {
+    const result = await checkLinksString('<p>\n<a href="#a&amp;b">X</a>');
+    assert.deepStrictEqual(result.files[0].fragmentsMissing, [{ fragment: '#a&amp;b', lines: [2] }]);
+  });
+
+  test('Skips fragments matching an ignore entry', async () => {
+    assert.deepStrictEqual(await missing('<a href="#/settings">S</a><a href="#!/home">H</a><a href="#x">X</a>', { ignore: ['#/', '#!'] }), ['#x']);
+  });
+
+  test('Skips all fragments with ignore entry `#`', async () => {
+    const result = await checkLinksString('<a href="#x">X</a>', { ignore: ['#'] });
+    assert.deepStrictEqual(result.files[0].fragmentsMissing, []);
+    assert.strictEqual(result.countFragmentsChecked, 0);
+  });
+
+  test('Applies fragment ignore entries to encoded fragments', async () => {
+    assert.deepStrictEqual(await missing('<a href="&#35;route">R</a>', { ignore: ['#'] }), []);
+    assert.deepStrictEqual(await missing('<a href="&#35;/settings">S</a>', { ignore: ['#/'] }), []);
+  });
+
+  test('Applies fragment ignore entries as reported', async () => {
+    assert.deepStrictEqual(await missing('<a href="#a&amp;b">X</a>', { ignore: ['#a&amp;b'] }), []);
+  });
+
+  test('Matches fragment ignore entries case-sensitively', async () => {
+    assert.deepStrictEqual(await missing('<a href="#X">X</a>', { ignore: ['#x'] }), ['#X']);
+  });
+
+  test('Does not apply fragment ignore entries to URLs', async () => {
+    const result = await checkLinksString(`<a href="${testServerBase}/not-found">Broken</a>`, { ignore: ['#'] });
+    assert.strictEqual(result.countBroken, 1);
   });
 });
 

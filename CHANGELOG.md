@@ -4,6 +4,14 @@ All notable changes to hihtml are documented in this file, which is (mostly) AI-
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-10-13
+
+### Added
+
+* Added a check for same-document fragment links (`href="#…"`) without a matching target, reported as a warning during link checking (configurable via `#` prefixes in `links.ignore`)
+* Added line numbers to link check results (`lines`) and output
+* Added line numbers to deprecated markup output, and every occurrence with line and column to results (`locations`), via ObsoHTML 2.1.0
+
 ## [1.7.1] - 2026-10-08
 
 ### Fixed

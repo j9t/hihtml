@@ -23,7 +23,7 @@ Without options, hihtml validates HTML files and checks for deprecated markup in
 | Flag | Description |
 |---|---|
 | `-c`, `--check-code` | Check HTML code: validate and check for deprecated markup (default) |
-| `-l`, `--check-links` | Check all external http/https URLs for broken references |
+| `-l`, `--check-links` | Check all external http/https URLs for broken references, and same-document fragment links (`#…`) for missing targets |
 | `-m`, `--minify` | Minify HTML files in-place, or to `--output` |
 | `-a`, `--all` | Check HTML code and links, then minify if there are no validation errors (built-in conformance gate—different from using all individual flags together) |
 | `-i`, `--input <dir>` | Input directory (alternative to the positional argument; default: current directory) |
@@ -116,7 +116,7 @@ const checks = await checkCode(files);
 // { validation: { files, countErrors, countWarnings, countIgnored }, deprecation: { files, countIssues } }
 
 const links = await checkLinks(files);
-// { files: [{ path, links: [{ url, status, ok, skipped?, warning?, error? }], countBroken }], countBroken, countChecked, countSkipped, countFileErrors }
+// { files: [{ path, links: [{ url, lines, status, ok, skipped?, warning?, error? }], fragmentsMissing: [{ fragment, lines }], countBroken }], countBroken, countChecked, countSkipped, countFragmentsChecked, countFragmentsMissing, countFileErrors }
 
 const minification = await minify(files, files); // in-place
 // { files: [{ path, sizeOriginal, sizeMinified }], saved }
@@ -154,25 +154,27 @@ Note: `result.validation.files[0].path` and `result.deprecation.files[0].path` w
 
 #### `checkLinks(filePaths, options?)`
 
-Checks all external http/https URLs (`href`, `src`, `srcset`, `action` attributes) found in the given HTML files. Each unique URL is checked once; results are mapped back to every file it appears in. Returns `Promise<ResultLinks>`.
+Checks all external http/https URLs (`href`, `src`, `srcset`, `action` attributes) found in the given HTML files, as well as whether same-document fragment links (`href="#…"`) have a target. Each unique URL is checked once; results are mapped back to every file it appears in, with the lines it appears on. Returns `Promise<ResultLinks>`.
 
 * `options.timeout`: Request timeout in milliseconds (default: `10000`)
 * `options.concurrency`: Maximum concurrent requests (default: `8`)
 * `options.warnOnPermanentRedirects`: Warn on 301/308 permanent redirects (default: `false`)
-* `options.ignore`: List of hostnames or URL prefixes to skip (default: `[]`)
+* `options.ignore`: List of hostnames, URL prefixes, or fragment prefixes (starting with `#`) to skip (default: `[]`)
 * `options.onStart`: Called once with the total number of URLs to check
 * `options.onProgress`: Called after each URL is checked
 
 Links are checked via HEAD request, falling back to GET on 405. 4xx and 5xx responses are reported as broken. Skipped URLs (from the ignore list) appear in results with `skipped: true` and are never counted as broken.
 
+Fragment links without an element of that `id` (or an `a` element of that `name`) are listed in `fragmentsMissing` and reported as warnings—they’re not counted as broken and don’t affect the exit code, as scripts may add targets at runtime. `#`, `#top`, and text fragments (`#:~:text=…`) are accepted, fragments are matched case-sensitively and percent-decoded, and documents with a `base` URL are skipped (their fragments point elsewhere). To skip fragments, e.g., for client-side routes, add fragment prefixes to the ignore list, like `"#/"`. `"#"` turns fragment checking off.
+
 #### `checkLinksString(content, options?)`
 
-Checks all external http/https URLs found in an HTML string. Returns `Promise<ResultLinks>`—same shape as `checkLinks`. Useful when HTML is available as a string rather than a file, e.g., to check links in a fetched document or API response.
+Checks all external http/https URLs and same-document fragment links found in an HTML string. Returns `Promise<ResultLinks>`—same shape as `checkLinks`. Useful when HTML is available as a string rather than a file, e.g., to check links in a fetched document or API response.
 
 * `options.timeout`: Request timeout in milliseconds (default: `10000`)
 * `options.concurrency`: Maximum concurrent requests (default: `8`)
 * `options.warnOnPermanentRedirects`: Warn on 301/308 permanent redirects (default: `false`)
-* `options.ignore`: List of hostnames or URL prefixes to skip (default: `[]`)
+* `options.ignore`: List of hostnames, URL prefixes, or fragment prefixes (starting with `#`) to skip (default: `[]`)
 * `options.onStart`: Called once with the total number of URLs to check
 * `options.onProgress`: Called after each URL is checked
 
@@ -237,7 +239,7 @@ hihtml.config.json takes precedence over package.json when both are present.
 
 ### How do I only run select checks?
 
-Use the individual flags (`-c`, `-l`, `-m`) instead of `--all`/`-a`. Each flag only exits `1` for issues within its own scope, so you control exactly what affects the exit code. To suppress specific HTML-validate rule IDs without disabling validation entirely, use `validation.ignore` in your configuration. To suppress specific broken links without skipping link checking altogether, use `links.ignore`.
+Use the individual flags (`-c`, `-l`, `-m`) instead of `--all`/`-a`. Each flag only exits `1` for issues within its own scope, so you control exactly what affects the exit code. To suppress specific HTML-validate rule IDs without disabling validation entirely, use `validation.ignore` in your configuration. To suppress specific broken links or fragment warnings without skipping link checking altogether, use `links.ignore`.
 
 ### Can hihtml check accessibility?
 

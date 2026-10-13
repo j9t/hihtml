@@ -1,8 +1,10 @@
 import type {
   ResultCodeValidation,
   ResultCodeDeprecation,
+  ResultCodeDeprecationOccurrence,
   ResultCode,
   ResultLinksUrl,
+  ResultLinksFragment,
   ResultLinksFile,
   ResultLinks,
   ResultMinification,
@@ -26,8 +28,10 @@ import {
 export type {
   ResultCodeValidation,
   ResultCodeDeprecation,
+  ResultCodeDeprecationOccurrence,
   ResultCode,
   ResultLinksUrl,
+  ResultLinksFragment,
   ResultLinksFile,
   ResultLinks,
   ResultMinification,
