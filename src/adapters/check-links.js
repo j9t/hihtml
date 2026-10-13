@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import { createRequire } from 'node:module';
+import { decodeHTMLAttribute } from 'entities';
 import { runWithConcurrency } from '../lib/concurrency.js';
 
 const require = createRequire(import.meta.url);
@@ -158,6 +159,8 @@ function checkFragments(stripped, lineAt, ignoreFragments) {
   const targets = new Set();
   /** @type {Map<string, number[]>} */
   const fragments = new Map();
+  /** @type {Map<string, string>} */
+  const fragmentsDecoded = new Map();
 
   for (const tag of stripped.matchAll(RE_TAG)) {
     const tagName = tag[1].toLowerCase();
@@ -166,19 +169,22 @@ function checkFragments(stripped, lineAt, ignoreFragments) {
       const attrName = attr[1].toLowerCase();
       const value = attr[2] ?? attr[3] ?? attr[4];
       if (value === undefined) continue;
-      if (attrName === 'id' || (attrName === 'name' && tagName === 'a')) targets.add(value);
+      if (attrName === 'id' || (attrName === 'name' && tagName === 'a')) targets.add(decodeHTMLAttribute(value));
       if (attrName === 'href') {
         if (tagName === 'base') return { fragmentsMissing: [], countChecked: 0 };
+        // Matched decoded, as browsers see it, but reported as written
         const fragment = value.trim();
-        if (fragment.startsWith('#') && !ignoreFragments.some(prefix => fragment.startsWith(prefix))) {
+        const decoded = decodeHTMLAttribute(fragment).trim();
+        if (decoded.startsWith('#') && !ignoreFragments.some(prefix => fragment.startsWith(prefix))) {
           addLine(fragments, fragment, lineAt(offsetAttrs + /** @type {number} */ (attr.index)));
+          fragmentsDecoded.set(fragment, decoded);
         }
       }
     }
   }
 
   const fragmentsMissing = [...fragments]
-    .filter(([fragment]) => !isFragmentResolvable(fragment, targets))
+    .filter(([fragment]) => !isFragmentResolvable(/** @type {string} */ (fragmentsDecoded.get(fragment)), targets))
     .map(([fragment, lines]) => ({ fragment, lines }));
   return { fragmentsMissing, countChecked: fragments.size };
 }

@@ -1389,6 +1389,23 @@ describe('Fragment links', () => {
     assert.deepStrictEqual(await missing('<a href=#x>X</a><p title=It\'s id=x>'), []);
   });
 
+  test('Decodes character references in fragments and targets', async () => {
+    assert.deepStrictEqual(await missing('<a href="#a&amp;b">X</a><p id="a&b">'), []);
+    assert.deepStrictEqual(await missing('<a href="#caf&eacute;">X</a><p id="café">'), []);
+    assert.deepStrictEqual(await missing('<a href="#&#x41;">X</a><p id="A">'), []);
+    assert.deepStrictEqual(await missing('<a href="#x">X</a><p id="&#120;">'), []);
+    assert.deepStrictEqual(await missing('<a href="#old">X</a><a name="&#111;ld"></a>'), []);
+  });
+
+  test('Treats a fragment written as a character reference as a fragment link', async () => {
+    assert.deepStrictEqual(await missing('<a href="&#35;nope">X</a>'), ['&#35;nope']);
+  });
+
+  test('Reports missing fragments as written', async () => {
+    const result = await checkLinksString('<p>\n<a href="#a&amp;b">X</a>');
+    assert.deepStrictEqual(result.files[0].fragmentsMissing, [{ fragment: '#a&amp;b', lines: [2] }]);
+  });
+
   test('Skips fragments matching an ignore entry', async () => {
     assert.deepStrictEqual(await missing('<a href="#/settings">S</a><a href="#!/home">H</a><a href="#x">X</a>', { ignore: ['#/', '#!'] }), ['#x']);
   });

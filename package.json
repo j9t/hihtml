@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "commander": "^15.0.0",
+    "entities": "^8.1.0",
     "html-minifier-next": "^8.10.8",
     "html-validate": "^11.16.2",
     "obsohtml": "^2.1.0"
