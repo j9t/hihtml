@@ -118,10 +118,14 @@ function extractUrls(stripped, lineAt) {
   }
 
   for (const m of stripped.matchAll(RE_SRCSET)) {
-    for (const entry of (m[1] ?? m[2]).split(',')) {
-      const candidate = entry.trim().split(/\s+/)[0];
+    const value = m[1] ?? m[2];
+    // The value ends right before the closing quote
+    const offsetValue = m.index + m[0].length - 1 - value.length;
+    for (const entry of value.matchAll(/(?<=^|,)\s*([^\s,]+)/dg)) {
+      const candidate = entry[1];
       if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
-        try { addLine(urls, new URL(candidate).href.split('#')[0], lineAt(m.index)); } catch { /* skip malformed URLs */ }
+        const offset = offsetValue + /** @type {number[][]} */ (entry.indices)[1][0];
+        try { addLine(urls, new URL(candidate).href.split('#')[0], lineAt(offset)); } catch { /* skip malformed URLs */ }
       }
     }
   }
@@ -175,7 +179,7 @@ function checkFragments(stripped, lineAt, ignoreFragments) {
         // Matched decoded, as browsers see it, but reported as written
         const fragment = value.trim();
         const decoded = decodeHTMLAttribute(fragment).trim();
-        if (decoded.startsWith('#') && !ignoreFragments.some(prefix => fragment.startsWith(prefix))) {
+        if (decoded.startsWith('#') && !ignoreFragments.some(prefix => decoded.startsWith(prefix) || fragment.startsWith(prefix))) {
           addLine(fragments, fragment, lineAt(offsetAttrs + /** @type {number} */ (attr.index)));
           fragmentsDecoded.set(fragment, decoded);
         }

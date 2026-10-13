@@ -1283,6 +1283,13 @@ describe('Link line numbers', () => {
     assert.deepStrictEqual(result.files[0].links[0].lines, [9]);
   });
 
+  test('Reports the line of each candidate in a multiline `srcset`', async () => {
+    const result = await checkLinksString(`<img\n  srcset="${testServerBase}/ok 1x,\n          ${testServerBase}/not-found 2x">`);
+    const byUrl = Object.fromEntries(result.files[0].links.map(l => [l.url, l.lines]));
+    assert.deepStrictEqual(byUrl[`${testServerBase}/ok`], [2]);
+    assert.deepStrictEqual(byUrl[`${testServerBase}/not-found`], [3]);
+  });
+
   test('Reports lines for skipped URLs', async () => {
     const result = await checkLinksString(`<p>\n<a href="${testServerBase}/ok">OK</a>`, { ignore: ['127.0.0.1'] });
     assert.deepStrictEqual(result.files[0].links[0].lines, [2]);
@@ -1414,6 +1421,15 @@ describe('Fragment links', () => {
     const result = await checkLinksString('<a href="#x">X</a>', { ignore: ['#'] });
     assert.deepStrictEqual(result.files[0].fragmentsMissing, []);
     assert.strictEqual(result.countFragmentsChecked, 0);
+  });
+
+  test('Applies fragment ignore entries to encoded fragments', async () => {
+    assert.deepStrictEqual(await missing('<a href="&#35;route">R</a>', { ignore: ['#'] }), []);
+    assert.deepStrictEqual(await missing('<a href="&#35;/settings">S</a>', { ignore: ['#/'] }), []);
+  });
+
+  test('Applies fragment ignore entries as reported', async () => {
+    assert.deepStrictEqual(await missing('<a href="#a&amp;b">X</a>', { ignore: ['#a&amp;b'] }), []);
   });
 
   test('Matches fragment ignore entries case-sensitively', async () => {
