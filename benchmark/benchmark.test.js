@@ -153,5 +153,23 @@ describe('Benchmark', () => {
         await fs.rm(dirWork, { recursive: true, force: true });
       }
     });
+
+    test('Ignores baseline entries without a positive finite `time`', async () => {
+      const dirWork = await fs.mkdtemp(path.join(os.tmpdir(), 'hihtml-benchmark-'));
+      const log = console.log;
+      const lines = [];
+      try {
+        const entries = { small: { time: 0 }, article: { time: 'fast', spread: 'x' }, links: { spread: 5 }, markup: { time: 1, spread: 'x' } };
+        await fs.writeFile(path.join(dirWork, 'baseline.json'), JSON.stringify({ metric: 'fastest', files: { 'check-links': entries } }));
+        console.log = (...args) => lines.push(args.join(' '));
+        await main({ argv: ['--iterations=2', '--task=check-links'], dirWork });
+      } finally {
+        console.log = log;
+        await fs.rm(dirWork, { recursive: true, force: true });
+      }
+      const output = lines.join('\n');
+      assert.doesNotMatch(output, /NaN|Infinity|x%/);
+      assert.match(output, /only 1 of 4 file\(s\) have a baseline entry/);
+    });
   });
 });

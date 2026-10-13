@@ -222,14 +222,17 @@ async function main({ argv = process.argv.slice(2), dirWork = __dirname } = {}) 
       timeTotal += time;
       processed++;
 
-      const prev = baseline?.files?.[taskName]?.[file.name];
+      // A hand-edited or corrupt entry would turn deltas and totals into `NaN`, so it counts as absent
+      const entry = baseline?.files?.[taskName]?.[file.name];
+      const prev = Number.isFinite(entry?.time) && entry.time > 0 ? entry : undefined;
+      const spreadPrev = Number.isFinite(prev?.spread) ? prev.spread : 0;
       if (prev) {
         timeTotalBase += prev.time;
-        noiseWeightedBase += (prev.spread ?? 0) * prev.time;
+        noiseWeightedBase += spreadPrev * prev.time;
         matched++;
       }
       // A delta has to clear both runs’ noise, so widen the band by the baseline’s own spread
-      const band = (noise ?? 0) + (prev?.spread ?? 0);
+      const band = (noise ?? 0) + spreadPrev;
       const detailStr = prev && prev.detail !== undefined && prev.detail !== detail
         ? `${detail} (was: ${prev.detail})`
         : detail;
