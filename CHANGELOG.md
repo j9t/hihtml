@@ -4,6 +4,17 @@ All notable changes to hihtml are documented in this file, which is (mostly) AI-
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-10-14
+
+### Fixed
+
+* Ensured link checking only checks URLs in `href`, `src`, `action`, and `srcset` attributes, no longer URL-looking text inside other attribute values or in content
+* Ensured a `<!--` inside a `script` or `style` start tag no longer hides the links that follow it from link checking, as it does not start a comment
+
+### Changed
+
+* Sped up link extraction and fragment checking by about 40% overall (and up to 60% on markup-heavy pages), using a single pass over the document
+
 ## [1.8.0] - 2026-10-13
 
 ### Added

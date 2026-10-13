@@ -1260,6 +1260,24 @@ describe('URL extraction', () => {
   test('Does not check URLs inside `<style>` body', async () => {
     assert.deepStrictEqual(await found(`<style>a::before { content: "${ok()}"; }</style>`), { checked: 0, broken: 0 });
   });
+
+  test('Checks prefixed URL attributes like `xlink:href` and `data-src`', async () => {
+    assert.deepStrictEqual(await found(`<svg><a xlink:href="${ok()}">L</a></svg>`), { checked: 1, broken: 0 });
+    assert.deepStrictEqual(await found(`<img data-src="${ok()}">`), { checked: 1, broken: 0 });
+  });
+
+  test('Ignores URL-looking text inside attribute values', async () => {
+    assert.deepStrictEqual(await found(`<a title="href='${ok()}'">L</a>`), { checked: 0, broken: 0 });
+  });
+
+  test('Ignores URL-looking text in content', async () => {
+    assert.deepStrictEqual(await found(`<p>href="${ok()}"</p>`), { checked: 0, broken: 0 });
+  });
+
+  test('Does not treat `<!--` in a `<script>` or `<style>` start tag as a comment', async () => {
+    assert.deepStrictEqual(await found(`<script data-x="<!--"></script><a href="${ok()}">L</a><p>--></p>`), { checked: 1, broken: 0 });
+    assert.deepStrictEqual(await found(`<style data-x="<!--"></style><a href="${ok()}">L</a><p>--></p>`), { checked: 1, broken: 0 });
+  });
 });
 
 // Programmatic API: line numbers

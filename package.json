@@ -53,13 +53,15 @@
     "url": "git+https://github.com/j9t/hihtml.git"
   },
   "scripts": {
+    "benchmark": "node benchmark/benchmark.js",
     "lint": "eslint .",
     "prepare": "git config core.hooksPath .githooks || true",
     "start": "node ./bin/hihtml.js",
     "test": "npm run test:types && node --test bin/hihtml.test.js",
+    "test:benchmark": "node --test benchmark/benchmark.test.js",
     "test:types": "tsc"
   },
   "type": "module",
   "types": "src/index.d.ts",
-  "version": "1.8.0"
+  "version": "1.8.1"
 }

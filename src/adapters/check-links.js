@@ -13,11 +13,33 @@ export const DEFAULT_LINK_TIMEOUT = 10_000;
 
 const USER_AGENT = `hihtml/${version} link-checker`;
 
-const RE_ATTR = /\b(?:href|src|action)\s*=\s*(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)'|(https?:\/\/[^\s"'`=<>]+))/gi;
-const RE_SRCSET = /\bsrcset\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
+// URL-carrying attribute names, with `\b`-style word-boundary semantics: an exact
+// `href`, `src`, `action`, or `srcset`, or the same after any non-word character
+// (`xlink:href`, `data-src`)
+const RE_URL_ATTR = /(?:^|[^\w])(?:href|src|action)$/;
+const RE_SRCSET_ATTR = /(?:^|[^\w])srcset$/;
+// Loose over-approximation of “this tag text holds an attribute the walk uses”—a tag
+// without any of these substrings cannot yield a URL, a fragment target, or a fragment link
+const RE_CANDIDATE_ATTR = /id|name|href|src|action/i;
 // As in HTML’s tokenizer, quotes only delimit attribute values right after `=`
 const RE_TAG = /<([a-z][^\s/>]*)((?:=\s*"[^"]*"|=\s*'[^']*'|[^>])*)>/gi;
 const RE_TAG_ATTR = /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g;
+// Attribute names that can matter, by first or last character (lowercased): fragment
+// targets (`id`, `name`) start with `i`/`n`; URL attributes (`href`, `src`, `action`,
+// `srcset`) end with `f`/`c`/`t`/`n`. Enough to skip lowercasing everything else.
+const FRAGMENT_ATTR_FIRST = new Set([105, 110]); // i, n
+const URL_ATTR_LAST = new Set([102, 99, 116, 110]); // f, c, t, n
+// URL values: quoted values must be a URL exactly—no whitespace or `>`; unquoted values
+// match up to the first excluded character
+const RE_URL_VALUE_DOUBLE = /^https?:\/\/[^"\s>]+$/i;
+const RE_URL_VALUE_SINGLE = /^https?:\/\/[^'\s>]+$/i;
+const RE_URL_VALUE_UNQUOTED = /^https?:\/\/[^\s"'`=<>]+/i;
+
+// Regions blanked by `strip`: comments and `script`/`style` bodies
+const RE_BLANK_OPEN = /<!--|<(script|style)\b[^>]*>/gi;
+const RE_OPEN_SCRIPT = /<script\b[^>]*>/gi;
+const RE_CLOSE_SCRIPT = /<\/script>/gi;
+const RE_CLOSE_STYLE = /<\/style>/gi;
 
 /**
  * @typedef {Object} ResultLinksUrl
@@ -59,15 +81,87 @@ const RE_TAG_ATTR = /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/
 
 /**
  * Blank out comments and `script`/`style` bodies, keeping offsets and line breaks intact.
+ *
+ * One left-to-right scan rather than one replace per region type: every `replace` would
+ * scan and copy the whole document again. The result matches blanking comments, then
+ * `script` bodies, then `style` bodies in three passes—when hunting a `script`/`style`
+ * closer, regions an earlier pass would have blanked are skipped over, because they
+ * swallow anything inside them (see `findElementClose`). Unterminated regions, which
+ * the earlier pass would not match, protect nothing. Unlike those passes, and as in
+ * browsers, a `<!--` inside a `script`/`style` start tag does not open a comment.
  * @param {string} content
  * @returns {string}
  */
 function strip(content) {
   const blank = (/** @type {string} */ text) => text.replace(/[^\n]/g, ' ');
-  return content
-    .replace(/<!--[\s\S]*?-->/g, match => blank(match))
-    .replace(/(<script\b[^>]*>)([\s\S]*?)(<\/script>)/gi, (_, open, body, close) => open + blank(body) + close)
-    .replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi, (_, open, body, close) => open + blank(body) + close);
+  /** @type {string[]} */
+  const out = [];
+  let cursor = 0;
+  RE_BLANK_OPEN.lastIndex = 0;
+  let match;
+  while ((match = RE_BLANK_OPEN.exec(content)) !== null) {
+    if (match[0] !== '<!--') {
+      const isScript = match[1].toLowerCase() === 'script';
+      const close = findElementClose(content, match.index + match[0].length, isScript ? RE_CLOSE_SCRIPT : RE_CLOSE_STYLE, !isScript);
+      if (!close) continue;
+      out.push(content.slice(cursor, match.index + match[0].length));
+      out.push(blank(content.slice(match.index + match[0].length, close.index)));
+      out.push(close[0]);
+      cursor = close.index + close[0].length;
+    } else {
+      const end = content.indexOf('-->', match.index + 4);
+      if (end === -1) continue;
+      out.push(content.slice(cursor, match.index));
+      out.push(blank(content.slice(match.index, end + 3)));
+      cursor = end + 3;
+    }
+    RE_BLANK_OPEN.lastIndex = cursor;
+  }
+  out.push(content.slice(cursor));
+  return out.join('');
+}
+
+/**
+ * Find the closer matching a `script`/`style` opener, or null when the element
+ * is unclosed (and so left as is). Regions blanked by earlier passes are skipped
+ * over: terminated comments for both elements, plus `script` regions for `style`,
+ * as the working order is comments, then scripts, then styles. An unclosed region
+ * protects nothing and is skipped past.
+ * @param {string} content
+ * @param {number} from - Offset right after the opener
+ * @param {RegExp} reClose - The element’s closer (`/g` and `/i`, `lastIndex` driven)
+ * @param {boolean} isStyle - Whether `script` regions must be skipped over, too
+ * @returns {RegExpExecArray | null}
+ */
+function findElementClose(content, from, reClose, isStyle) {
+  reClose.lastIndex = from;
+  RE_OPEN_SCRIPT.lastIndex = from;
+  let close = reClose.exec(content);
+  let script = isStyle ? RE_OPEN_SCRIPT.exec(content) : null;
+  let comment;
+  for (;;) {
+    if (!close) return null;
+    // Only a protector before the closer can swallow it, so the search stops there—a
+    // closer is usually near its opener, keeping the slice small (a `script` gate on
+    // plain `script` text is a deliberate over-approximation of the opener regex)
+    const segment = close.index > from ? content.slice(from, close.index) : '';
+    const at = segment.indexOf('<!--');
+    comment = at === -1 ? -1 : from + at;
+    if (isStyle && script && script.index >= close.index && !/script/i.test(segment)) script = null;
+    if (script && script.index < close.index && (comment === -1 || script.index < comment)) {
+      const scriptClose = findElementClose(content, script.index + script[0].length, RE_CLOSE_SCRIPT, false);
+      from = scriptClose ? scriptClose.index + scriptClose[0].length : script.index + script[0].length;
+    } else if (comment !== -1 && comment < close.index) {
+      const commentEnd = content.indexOf('-->', comment + 4);
+      from = commentEnd === -1 ? comment + 4 : commentEnd + 3;
+    } else {
+      return close;
+    }
+    reClose.lastIndex = from;
+    close = reClose.exec(content);
+    RE_OPEN_SCRIPT.lastIndex = from;
+    if (isStyle) script = RE_OPEN_SCRIPT.exec(content);
+  }
 }
 
 /**
@@ -103,35 +197,103 @@ function addLine(map, key, line) {
 }
 
 /**
- * Extract unique http/https URLs from (stripped) HTML content, with the lines they appear on.
+ * Walk all tags once, collecting external http/https URLs (`href`, `src`, `action`,
+ * `srcset` attributes) and checking same-document fragment links (`href="#…"`) against
+ * their targets (`id` values, `name` values of `a` elements). One walk instead of
+ * separate full-text and per-tag passes, each of which scanned the document.
  * @param {string} stripped
  * @param {(offset: number) => number} lineAt
- * @returns {Map<string, number[]>}
+ * @param {string[]} ignoreFragments - Fragment prefixes to skip
+ * @returns {{ urls: Map<string, number[]>, fragmentsMissing: ResultLinksFragment[], countChecked: number }}
  */
-function extractUrls(stripped, lineAt) {
+function extractUrlsAndFragments(stripped, lineAt, ignoreFragments) {
   /** @type {Map<string, number[]>} */
   const urls = new Map();
+  /** @type {Map<string, number[]>} */
+  const srcsetUrls = new Map();
+  /** @type {Set<string>} */
+  const targets = new Set();
+  /** @type {Map<string, number[]>} */
+  const fragments = new Map();
+  /** @type {Map<string, string>} */
+  const fragmentsDecoded = new Map();
+  let hasBase = false;
 
-  for (const m of stripped.matchAll(RE_ATTR)) {
-    const rawUrl = m[1] ?? m[2] ?? m[3];
-    try { addLine(urls, new URL(rawUrl).href.split('#')[0], lineAt(m.index)); } catch { /* skip malformed URLs */ }
-  }
+  const addUrl = (/** @type {string} */ rawUrl, /** @type {number} */ offset, /** @type {Map<string, number[]>} */ into = urls) => {
+    try { addLine(into, new URL(rawUrl).href.split('#')[0], lineAt(offset)); } catch { /* skip malformed URLs */ }
+  };
 
-  for (const m of stripped.matchAll(RE_SRCSET)) {
-    const value = m[1] ?? m[2];
-    // The value ends right before the closing quote
-    const offsetValue = m.index + m[0].length - 1 - value.length;
-    for (const entry of value.matchAll(/(?<=^|,)\s*([^\s,]+)/dg)) {
-      const candidate = entry[1];
-      if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
-        const offset = offsetValue + /** @type {number[][]} */ (entry.indices)[1][0];
-        try { addLine(urls, new URL(candidate).href.split('#')[0], lineAt(offset)); } catch { /* skip malformed URLs */ }
+  for (const tag of stripped.matchAll(RE_TAG)) {
+    const tagName = tag[1].toLowerCase();
+    // Most tags carry no attribute this check cares about; the loose substring
+    // pre-check (over-matching only costs the walk) skips parsing their attributes
+    if (!RE_CANDIDATE_ATTR.test(tag[2])) continue;
+    const offsetAttrs = tag.index + 1 + tag[1].length;
+    for (const attr of tag[2].matchAll(RE_TAG_ATTR)) {
+      const raw = attr[1];
+      const value = attr[2] ?? attr[3] ?? attr[4];
+      // Fragment targets start with `i`/`n`, URL attributes end with `f`/`c`/`t`/`n`; the
+      // character check rejects every other attribute before it is lowercased
+      const first = raw.charCodeAt(0) | 32;
+      const last = raw.charCodeAt(raw.length - 1) | 32;
+      if (value === undefined || (!URL_ATTR_LAST.has(last) && !FRAGMENT_ATTR_FIRST.has(first))) continue;
+      const attrName = raw.toLowerCase();
+      const offset = offsetAttrs + /** @type {number} */ (attr.index);
+
+      if (FRAGMENT_ATTR_FIRST.has(first) && (attrName === 'id' || (attrName === 'name' && tagName === 'a'))) {
+        targets.add(decodeHTMLAttribute(value));
+      } else if (URL_ATTR_LAST.has(last)) {
+        if (attrName === 'href') {
+          if (tagName === 'base') {
+            // A `base` URL moves fragment resolution to another document, disabling the check
+            hasBase = true;
+          } else {
+            // Matched decoded, as browsers see it, but reported as written
+            const fragment = value.trim();
+            const decoded = decodeHTMLAttribute(fragment).trim();
+            if (decoded.startsWith('#') && !ignoreFragments.some(prefix => decoded.startsWith(prefix) || fragment.startsWith(prefix))) {
+              addLine(fragments, fragment, lineAt(offset));
+              fragmentsDecoded.set(fragment, decoded);
+            }
+          }
+        }
+        if (RE_URL_ATTR.test(attrName)) {
+          if (attr[2] !== undefined) {
+            if (RE_URL_VALUE_DOUBLE.test(value)) addUrl(value, offset);
+          } else if (attr[3] !== undefined) {
+            if (RE_URL_VALUE_SINGLE.test(value)) addUrl(value, offset);
+          } else {
+            const matchUrl = RE_URL_VALUE_UNQUOTED.exec(value);
+            if (matchUrl) addUrl(matchUrl[0], offset);
+          }
+        } else if ((attr[2] !== undefined || attr[3] !== undefined) && RE_SRCSET_ATTR.test(attrName)) {
+          // The value ends right before the closing quote
+          const offsetValue = offset + attr[0].length - 1 - value.length;
+          for (const entry of value.matchAll(/(?<=^|,)\s*([^\s,]+)/dg)) {
+            const candidate = entry[1];
+            if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
+              addUrl(candidate, offsetValue + /** @type {number[][]} */ (entry.indices)[1][0], srcsetUrls);
+            }
+          }
+        }
       }
     }
   }
 
+  // Merge srcset URLs after attribute URLs, keeping per-file link order stable:
+  // attribute URLs first, srcset URLs second; URLs in both keep lines from each
+  for (const [url, lines] of srcsetUrls) {
+    const existing = urls.get(url);
+    if (existing) for (const line of lines) addLine(urls, url, line);
+    else urls.set(url, lines);
+  }
   for (const [url, lines] of urls) urls.set(url, [...new Set(lines)].sort((a, b) => a - b));
-  return urls;
+
+  // A `base` element discards the fragment bookkeeping, as the fragments resolve elsewhere
+  const fragmentsMissing = hasBase ? [] : [...fragments]
+    .filter(([fragment]) => !isFragmentResolvable(/** @type {string} */ (fragmentsDecoded.get(fragment)), targets))
+    .map(([fragment, lines]) => ({ fragment, lines }));
+  return { urls, fragmentsMissing, countChecked: hasBase ? 0 : fragments.size };
 }
 
 /**
@@ -148,49 +310,6 @@ function isFragmentResolvable(fragment, targets) {
   let decoded = value;
   try { decoded = decodeURIComponent(value); } catch { /* keep malformed encoding as is */ }
   return targets.has(decoded) || decoded.toLowerCase() === 'top';
-}
-
-/**
- * Find same-document fragment links (`href="#…"`) without a matching target.
- * Skipped when the document sets a `base` URL, as fragments then resolve against another document.
- * @param {string} stripped
- * @param {(offset: number) => number} lineAt
- * @param {string[]} ignoreFragments - Fragment prefixes to skip
- * @returns {{ fragmentsMissing: ResultLinksFragment[], countChecked: number }}
- */
-function checkFragments(stripped, lineAt, ignoreFragments) {
-  /** @type {Set<string>} */
-  const targets = new Set();
-  /** @type {Map<string, number[]>} */
-  const fragments = new Map();
-  /** @type {Map<string, string>} */
-  const fragmentsDecoded = new Map();
-
-  for (const tag of stripped.matchAll(RE_TAG)) {
-    const tagName = tag[1].toLowerCase();
-    const offsetAttrs = tag.index + 1 + tag[1].length;
-    for (const attr of tag[2].matchAll(RE_TAG_ATTR)) {
-      const attrName = attr[1].toLowerCase();
-      const value = attr[2] ?? attr[3] ?? attr[4];
-      if (value === undefined) continue;
-      if (attrName === 'id' || (attrName === 'name' && tagName === 'a')) targets.add(decodeHTMLAttribute(value));
-      if (attrName === 'href') {
-        if (tagName === 'base') return { fragmentsMissing: [], countChecked: 0 };
-        // Matched decoded, as browsers see it, but reported as written
-        const fragment = value.trim();
-        const decoded = decodeHTMLAttribute(fragment).trim();
-        if (decoded.startsWith('#') && !ignoreFragments.some(prefix => decoded.startsWith(prefix) || fragment.startsWith(prefix))) {
-          addLine(fragments, fragment, lineAt(offsetAttrs + /** @type {number} */ (attr.index)));
-          fragmentsDecoded.set(fragment, decoded);
-        }
-      }
-    }
-  }
-
-  const fragmentsMissing = [...fragments]
-    .filter(([fragment]) => !isFragmentResolvable(/** @type {string} */ (fragmentsDecoded.get(fragment)), targets))
-    .map(([fragment, lines]) => ({ fragment, lines }));
-  return { fragmentsMissing, countChecked: fragments.size };
 }
 
 /**
@@ -375,8 +494,8 @@ export async function checkLinks(filePaths, {
     }
     const stripped = strip(content);
     const lineAt = lineFinder(stripped);
-    const { fragmentsMissing, countChecked } = checkFragments(stripped, lineAt, ignoreList.fragments);
-    fileData.set(filePath, { urls: extractUrls(stripped, lineAt), fragmentsMissing, countFragmentsChecked: countChecked });
+    const { urls, fragmentsMissing, countChecked } = extractUrlsAndFragments(stripped, lineAt, ignoreList.fragments);
+    fileData.set(filePath, { urls, fragmentsMissing, countFragmentsChecked: countChecked });
   });
 
   const allUrls = new Set();
