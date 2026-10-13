@@ -122,6 +122,12 @@ function median(values) {
   return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+// A baseline entry fit for comparison, or undefined
+function baselineEntry(entry) {
+  if (!Number.isFinite(entry?.time) || entry.time <= 0) return undefined;
+  return { ...entry, spread: Number.isFinite(entry.spread) && entry.spread >= 0 ? entry.spread : null };
+}
+
 // Render a delta that is smaller than the run’s own noise as “~”, so a difference the
 // measurement cannot actually resolve never reads as a win or a regression
 function formatTimeDelta(curr, prev, noisePct) {
@@ -222,10 +228,8 @@ async function main({ argv = process.argv.slice(2), dirWork = __dirname } = {}) 
       timeTotal += time;
       processed++;
 
-      // A hand-edited or corrupt entry would turn deltas and totals into `NaN`, so it counts as absent
-      const entry = baseline?.files?.[taskName]?.[file.name];
-      const prev = Number.isFinite(entry?.time) && entry.time > 0 ? entry : undefined;
-      const spreadPrev = Number.isFinite(prev?.spread) ? prev.spread : 0;
+      const prev = baselineEntry(baseline?.files?.[taskName]?.[file.name]);
+      const spreadPrev = prev?.spread ?? 0;
       if (prev) {
         timeTotalBase += prev.time;
         noiseWeightedBase += spreadPrev * prev.time;
@@ -295,6 +299,7 @@ export {
   BENCH_WARMUP,
   DEFAULT_ITERATIONS,
   TASKS,
+  baselineEntry,
   fastest,
   formatTimeDelta,
   main,

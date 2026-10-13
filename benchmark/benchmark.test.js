@@ -8,6 +8,7 @@ import { CORPUS_HOSTS, generate } from './corpus.js';
 import {
   DEFAULT_ITERATIONS,
   TASKS,
+  baselineEntry,
   fastest,
   formatTimeDelta,
   main,
@@ -70,6 +71,22 @@ describe('Benchmark', () => {
     test('`spread` measures fastest-to-slowest', () => {
       assert.strictEqual(spread([10, 20]), 100);
       assert.strictEqual(spread([10, 10]), 0);
+    });
+  });
+
+  describe('`baselineEntry`', () => {
+    test('Rejects entries without a positive finite `time`', () => {
+      for (const entry of [undefined, {}, { time: 0 }, { time: -1 }, { time: 'fast' }, { time: Infinity }]) {
+        assert.strictEqual(baselineEntry(entry), undefined);
+      }
+    });
+
+    test('Keeps a non-negative finite `spread` and drops any other', () => {
+      assert.deepStrictEqual(baselineEntry({ time: 1, spread: 5, detail: 'd' }), { time: 1, spread: 5, detail: 'd' });
+      assert.strictEqual(baselineEntry({ time: 1, spread: 0 }).spread, 0);
+      for (const spread of [-1, 'x', null, undefined, NaN]) {
+        assert.strictEqual(baselineEntry({ time: 1, spread }).spread, null);
+      }
     });
   });
 
