@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { checkMarkup } from 'obsohtml';
+import { locateMarkup, obsoleteAttributes, obsoleteElements } from 'obsohtml';
 import { DEFAULT_CONCURRENCY, runWithConcurrency } from '../lib/concurrency.js';
 import { validate } from './validate.js';
 import { read } from '../lib/files.js';
@@ -9,6 +9,7 @@ import { read } from '../lib/files.js';
  * @property {string} path
  * @property {string[]} elements
  * @property {string[]} attributes
+ * @property {{ elements: import('obsohtml').Occurrence[], attributes: import('obsohtml').Occurrence[] }} locations
  * @property {string} [error]
  */
 
@@ -37,18 +38,25 @@ async function checkDeprecated(filePaths, { concurrency = DEFAULT_CONCURRENCY, c
       try {
         content = await fs.promises.readFile(filePath, 'utf8');
       } catch (err) {
-        return /** @type {ResultCodeDeprecationFile} */ ({ path: filePath, elements: [], attributes: [], error: err instanceof Error ? err.message : String(err) });
+        return /** @type {ResultCodeDeprecationFile} */ ({ path: filePath, elements: [], attributes: [], locations: { elements: [], attributes: [] }, error: err instanceof Error ? err.message : String(err) });
       }
     }
 
-    let result;
+    let locations;
     try {
-      result = checkMarkup(content);
+      locations = locateMarkup(content);
     } catch (err) {
       throw new Error(`ObsoHTML API error—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
     }
 
-    return /** @type {ResultCodeDeprecationFile} */ ({ path: filePath, elements: result.elements, attributes: result.attributes });
+    const namesElements = new Set(locations.elements.map(e => e.name));
+    const namesAttributes = new Set(locations.attributes.map(a => a.name));
+    return /** @type {ResultCodeDeprecationFile} */ ({
+      path: filePath,
+      elements: obsoleteElements.filter(name => namesElements.has(name)),
+      attributes: obsoleteAttributes.filter(name => namesAttributes.has(name)),
+      locations,
+    });
   });
 
   const countIssues = files.reduce((acc, f) => acc + f.elements.length + f.attributes.length, 0);

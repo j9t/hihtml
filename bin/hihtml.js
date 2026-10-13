@@ -25,7 +25,7 @@ program
   .version(pkg.version, '-v, --version')
   .description(pkg.description)
   .option('-c, --check-code', 'check HTML code: validate and check for deprecated markup (default when no mode given)')
-  .option('-l, --check-links', 'check all external http/https URLs for broken references')
+  .option('-l, --check-links', 'check all external http/https URLs and same-document fragment links for broken references')
   .option('-m, --minify', 'minify HTML files (in-place unless `--output` is set)')
   .option('-a, --all', 'check HTML code and links, then minify if no validation errors (built-in conformance gate—different from using all individual flags together)')
   .argument('[path]', 'input directory, or a single file (default: current directory)')
@@ -38,7 +38,7 @@ program
 Examples:
   npx hihtml                   Check current directory for HTML code issues (validate and check for deprecated markup)
   npx hihtml -c                Same as above
-  npx hihtml -l                Check all external http/https URLs for broken references
+  npx hihtml -l                Check external http/https URLs and fragment links for broken references
   npx hihtml -c -l             Check HTML code and links
   npx hihtml -m                Minify current directory in-place
   npx hihtml -a                Validate, check, check links, then minify if no validation errors
@@ -239,6 +239,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       linkProg.complete(
         linkResult.countBroken > 0
         || linkResult.countFileErrors > 0
+        || linkResult.countFragmentsMissing > 0
         || linkResult.files.some(f => f.links.some(l => l.warning === 'permanent-redirect'))
       );
 

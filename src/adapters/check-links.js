@@ -14,10 +14,14 @@ const USER_AGENT = `hihtml/${version} link-checker`;
 
 const RE_ATTR = /\b(?:href|src|action)\s*=\s*(?:"(https?:\/\/[^"\s>]+)"|'(https?:\/\/[^'\s>]+)'|(https?:\/\/[^\s"'`=<>]+))/gi;
 const RE_SRCSET = /\bsrcset\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
+// As in HTML’s tokenizer, quotes only delimit attribute values right after `=`
+const RE_TAG = /<([a-z][^\s/>]*)((?:=\s*"[^"]*"|=\s*'[^']*'|[^>])*)>/gi;
+const RE_TAG_ATTR = /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g;
 
 /**
  * @typedef {Object} ResultLinksUrl
  * @property {string} url
+ * @property {number[]} lines
  * @property {number|null} status
  * @property {boolean} ok
  * @property {boolean} [skipped]
@@ -27,9 +31,16 @@ const RE_SRCSET = /\bsrcset\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
  */
 
 /**
+ * @typedef {Object} ResultLinksFragment
+ * @property {string} fragment
+ * @property {number[]} lines
+ */
+
+/**
  * @typedef {Object} ResultLinksFile
  * @property {string} path
  * @property {ResultLinksUrl[]} links
+ * @property {ResultLinksFragment[]} fragmentsMissing
  * @property {number} countBroken
  * @property {string} [error]
  */
@@ -40,37 +51,136 @@ const RE_SRCSET = /\bsrcset\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
  * @property {number} countBroken
  * @property {number} countChecked
  * @property {number} countSkipped
+ * @property {number} countFragmentsChecked
+ * @property {number} countFragmentsMissing
  * @property {number} countFileErrors
  */
 
 /**
- * Extract unique http/https URLs from HTML content.
+ * Blank out comments and `script`/`style` bodies, keeping offsets and line breaks intact.
  * @param {string} content
- * @returns {string[]}
+ * @returns {string}
  */
-function extractUrls(content) {
-  const urls = new Set();
+function strip(content) {
+  const blank = (/** @type {string} */ text) => text.replace(/[^\n]/g, ' ');
+  return content
+    .replace(/<!--[\s\S]*?-->/g, match => blank(match))
+    .replace(/(<script\b[^>]*>)([\s\S]*?)(<\/script>)/gi, (_, open, body, close) => open + blank(body) + close)
+    .replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi, (_, open, body, close) => open + blank(body) + close);
+}
 
-  const stripped = content
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/(<script\b[^>]*>)[\s\S]*?<\/script>/gi, '$1</script>')
-    .replace(/(<style\b[^>]*>)[\s\S]*?<\/style>/gi, '$1</style>');
+/**
+ * Return a function mapping a character offset to its 1-based line number.
+ * @param {string} content
+ * @returns {(offset: number) => number}
+ */
+function lineFinder(content) {
+  const starts = [0];
+  for (let i = content.indexOf('\n'); i !== -1; i = content.indexOf('\n', i + 1)) starts.push(i + 1);
+  return offset => {
+    let lo = 0;
+    let hi = starts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (starts[mid] <= offset) lo = mid;
+      else hi = mid - 1;
+    }
+    return lo + 1;
+  };
+}
+
+/**
+ * Add a line to the list stored under `key`, creating the list if needed.
+ * @param {Map<string, number[]>} map
+ * @param {string} key
+ * @param {number} line
+ */
+function addLine(map, key, line) {
+  const lines = map.get(key);
+  if (!lines) map.set(key, [line]);
+  else if (lines.at(-1) !== line) lines.push(line);
+}
+
+/**
+ * Extract unique http/https URLs from (stripped) HTML content, with the lines they appear on.
+ * @param {string} stripped
+ * @param {(offset: number) => number} lineAt
+ * @returns {Map<string, number[]>}
+ */
+function extractUrls(stripped, lineAt) {
+  /** @type {Map<string, number[]>} */
+  const urls = new Map();
 
   for (const m of stripped.matchAll(RE_ATTR)) {
     const rawUrl = m[1] ?? m[2] ?? m[3];
-    try { urls.add(new URL(rawUrl).href.split('#')[0]); } catch { /* skip malformed URLs */ }
+    try { addLine(urls, new URL(rawUrl).href.split('#')[0], lineAt(m.index)); } catch { /* skip malformed URLs */ }
   }
 
   for (const m of stripped.matchAll(RE_SRCSET)) {
     for (const entry of (m[1] ?? m[2]).split(',')) {
       const candidate = entry.trim().split(/\s+/)[0];
       if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
-        try { urls.add(new URL(candidate).href.split('#')[0]); } catch { /* skip malformed URLs */ }
+        try { addLine(urls, new URL(candidate).href.split('#')[0], lineAt(m.index)); } catch { /* skip malformed URLs */ }
       }
     }
   }
 
-  return [...urls];
+  for (const [url, lines] of urls) urls.set(url, [...new Set(lines)].sort((a, b) => a - b));
+  return urls;
+}
+
+/**
+ * Whether a fragment points to the top of the document or to an existing target, per HTML’s “find a potential indicated element” algorithm
+ * @param {string} fragment - Including the leading `#`
+ * @param {Set<string>} targets - `id` values and `name` values of `a` elements
+ * @returns {boolean}
+ */
+function isFragmentResolvable(fragment, targets) {
+  let value = fragment.slice(1);
+  const indexDirective = value.indexOf(':~:');
+  if (indexDirective !== -1) value = value.slice(0, indexDirective);
+  if (value === '' || targets.has(value)) return true;
+  let decoded = value;
+  try { decoded = decodeURIComponent(value); } catch { /* keep malformed encoding as is */ }
+  return targets.has(decoded) || decoded.toLowerCase() === 'top';
+}
+
+/**
+ * Find same-document fragment links (`href="#…"`) without a matching target.
+ * Skipped when the document sets a `base` URL, as fragments then resolve against another document.
+ * @param {string} stripped
+ * @param {(offset: number) => number} lineAt
+ * @param {string[]} ignoreFragments - Fragment prefixes to skip
+ * @returns {{ fragmentsMissing: ResultLinksFragment[], countChecked: number }}
+ */
+function checkFragments(stripped, lineAt, ignoreFragments) {
+  /** @type {Set<string>} */
+  const targets = new Set();
+  /** @type {Map<string, number[]>} */
+  const fragments = new Map();
+
+  for (const tag of stripped.matchAll(RE_TAG)) {
+    const tagName = tag[1].toLowerCase();
+    const offsetAttrs = tag.index + 1 + tag[1].length;
+    for (const attr of tag[2].matchAll(RE_TAG_ATTR)) {
+      const attrName = attr[1].toLowerCase();
+      const value = attr[2] ?? attr[3] ?? attr[4];
+      if (value === undefined) continue;
+      if (attrName === 'id' || (attrName === 'name' && tagName === 'a')) targets.add(value);
+      if (attrName === 'href') {
+        if (tagName === 'base') return { fragmentsMissing: [], countChecked: 0 };
+        const fragment = value.trim();
+        if (fragment.startsWith('#') && !ignoreFragments.some(prefix => fragment.startsWith(prefix))) {
+          addLine(fragments, fragment, lineAt(offsetAttrs + /** @type {number} */ (attr.index)));
+        }
+      }
+    }
+  }
+
+  const fragmentsMissing = [...fragments]
+    .filter(([fragment]) => !isFragmentResolvable(fragment, targets))
+    .map(([fragment, lines]) => ({ fragment, lines }));
+  return { fragmentsMissing, countChecked: fragments.size };
 }
 
 /**
@@ -111,7 +221,7 @@ function requestSingle(url, method, timeout) {
  * Falls back from HEAD to GET on 405. Optionally warns on permanent redirects.
  * @param {string} url
  * @param {{ timeout?: number, warnOnPermanentRedirects?: boolean }} [options]
- * @returns {Promise<ResultLinksUrl>}
+ * @returns {Promise<Omit<ResultLinksUrl, 'lines'>>}
  */
 async function checkUrl(url, { timeout = DEFAULT_LINK_TIMEOUT, warnOnPermanentRedirects = false } = {}) {
   let currentUrl = url;
@@ -169,20 +279,23 @@ async function checkUrl(url, { timeout = DEFAULT_LINK_TIMEOUT, warnOnPermanentRe
 }
 
 /**
- * @typedef {{ hostnames: Set<string>, prefixes: string[] }} IgnoreList
+ * @typedef {{ hostnames: Set<string>, prefixes: string[], fragments: string[] }} IgnoreList
  */
 
 /**
- * Pre-process an ignore list into hostname entries (Set for O(1) lookup) and prefix entries.
- * Entries containing a slash are treated as URL prefixes; others as hostnames (exact or subdomain).
+ * Pre-process an ignore list into hostname entries (Set for O(1) lookup), prefix entries, and fragment prefixes.
+ * Entries starting with `#` are treated as (case-sensitive) fragment prefixes; entries containing a slash
+ * as URL prefixes; others as hostnames (exact or subdomain).
  * @param {string[]} ignore
  * @returns {IgnoreList}
  */
 function buildIgnoreList(ignore) {
-  const normalized = ignore.map(e => e.trim().toLowerCase());
+  const trimmed = ignore.map(e => e.trim());
+  const normalized = trimmed.filter(e => !e.startsWith('#')).map(e => e.toLowerCase());
   return {
     hostnames: new Set(normalized.filter(e => !e.includes('/'))),
     prefixes: normalized.filter(e => e.includes('/')).map(e => e.replace(/\/+$/, '')),
+    fragments: trimmed.filter(e => e.startsWith('#')),
   };
 }
 
@@ -211,7 +324,8 @@ function isIgnored(url, { hostnames, prefixes }) {
 }
 
 /**
- * Check all external http/https URLs (`href`, `src`, `srcset`, `action` attributes) found in the given HTML files.
+ * Check all external http/https URLs (`href`, `src`, `srcset`, `action` attributes) found in the given HTML files,
+ * and whether same-document fragment links have a target.
  * Each unique URL is checked once; results are mapped back to every file it appears in.
  * @param {string[]} filePaths
  * @param {{
@@ -234,7 +348,9 @@ export async function checkLinks(filePaths, {
   onProgress,
   onStart,
 } = {}) {
-  /** @type {Map<string, { urls: string[], error?: string }>} */
+  const ignoreList = buildIgnoreList(ignore);
+
+  /** @type {Map<string, { urls: Map<string, number[]>, fragmentsMissing: ResultLinksFragment[], countFragmentsChecked: number, error?: string }>} */
   const fileData = new Map();
 
   await runWithConcurrency(filePaths, concurrency, async (filePath) => {
@@ -243,19 +359,21 @@ export async function checkLinks(filePaths, {
       try {
         content = await fs.promises.readFile(filePath, 'utf8');
       } catch (err) {
-        fileData.set(filePath, { urls: [], error: err instanceof Error ? err.message : String(err) });
+        fileData.set(filePath, { urls: new Map(), fragmentsMissing: [], countFragmentsChecked: 0, error: err instanceof Error ? err.message : String(err) });
         return;
       }
     }
-    fileData.set(filePath, { urls: extractUrls(content) });
+    const stripped = strip(content);
+    const lineAt = lineFinder(stripped);
+    const { fragmentsMissing, countChecked } = checkFragments(stripped, lineAt, ignoreList.fragments);
+    fileData.set(filePath, { urls: extractUrls(stripped, lineAt), fragmentsMissing, countFragmentsChecked: countChecked });
   });
 
   const allUrls = new Set();
   for (const { urls } of fileData.values()) {
-    for (const url of urls) allUrls.add(url);
+    for (const url of urls.keys()) allUrls.add(url);
   }
 
-  const ignoreList = buildIgnoreList(ignore);
   const toCheck = new Set();
   const toSkip = new Set();
   for (const url of allUrls) {
@@ -265,7 +383,7 @@ export async function checkLinks(filePaths, {
 
   onStart?.(toCheck.size);
 
-  /** @type {Map<string, ResultLinksUrl>} */
+  /** @type {Map<string, Omit<ResultLinksUrl, 'lines'>>} */
   const urlResults = new Map();
 
   for (const url of toSkip) {
@@ -278,24 +396,26 @@ export async function checkLinks(filePaths, {
   });
 
   const files = filePaths.map(filePath => {
-    const data = fileData.get(filePath) ?? { urls: [], error: 'Unknown error' };
-    if (data.error) return /** @type {ResultLinksFile} */ ({ path: filePath, links: [], countBroken: 0, error: data.error });
+    const data = fileData.get(filePath) ?? { urls: new Map(), fragmentsMissing: [], countFragmentsChecked: 0, error: 'Unknown error' };
+    if (data.error) return /** @type {ResultLinksFile} */ ({ path: filePath, links: [], fragmentsMissing: [], countBroken: 0, error: data.error });
 
-    const links = data.urls.map(url => /** @type {ResultLinksUrl} */ ({ ...urlResults.get(url), url }));
+    const links = [...data.urls].map(([url, lines]) => /** @type {ResultLinksUrl} */ ({ ...urlResults.get(url), url, lines }));
     const countBroken = links.filter(l => !l.ok).length;
-    return /** @type {ResultLinksFile} */ ({ path: filePath, links, countBroken });
+    return /** @type {ResultLinksFile} */ ({ path: filePath, links, fragmentsMissing: data.fragmentsMissing, countBroken });
   });
 
   const countBroken = [...urlResults.values()].filter(r => !r.ok).length;
   const countSkipped = toSkip.size;
   const countFileErrors = files.filter(f => f.error !== undefined).length;
-  return { files, countBroken, countChecked: toCheck.size, countSkipped, countFileErrors };
+  const countFragmentsChecked = [...fileData.values()].reduce((acc, d) => acc + d.countFragmentsChecked, 0);
+  const countFragmentsMissing = files.reduce((acc, f) => acc + f.fragmentsMissing.length, 0);
+  return { files, countBroken, countChecked: toCheck.size, countSkipped, countFragmentsChecked, countFragmentsMissing, countFileErrors };
 }
 
 const SYNTHETIC_PATH = '(string input)';
 
 /**
- * Check all external http/https URLs found in an HTML string.
+ * Check all external http/https URLs and same-document fragment links found in an HTML string.
  * @param {string} content
  * @param {{
  *   concurrency?: number,

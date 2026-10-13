@@ -75,8 +75,10 @@ export function formatDeprecationResult(result, quiet = false) {
       const count = file.elements.length + file.attributes.length;
       lines.push(`  ${file.path}: ${s.warning(`${count} ${count === 1 ? 'issue' : 'issues'}`)}`);
       if (!quiet) {
-        for (const el   of file.elements)   lines.push(`    ${s.warning('⚠')} Deprecated element: <${el}>`);
-        for (const attr of file.attributes) lines.push(`    ${s.warning('⚠')} Deprecated attribute: ${attr}`);
+        const linesOf = (/** @type {import('obsohtml').Occurrence[]} */ found, /** @type {string} */ name) =>
+          linesLabel([...new Set(found.filter(o => o.name === name).map(o => o.line))]);
+        for (const el   of file.elements)   lines.push(`    ${s.warning('⚠')} ${linesOf(file.locations.elements, el)}Deprecated element: <${el}>`);
+        for (const attr of file.attributes) lines.push(`    ${s.warning('⚠')} ${linesOf(file.locations.attributes, attr)}Deprecated attribute: ${attr}`);
       }
     }
   }
@@ -93,16 +95,17 @@ export function formatDeprecationResult(result, quiet = false) {
  * @returns {string}
  */
 export function formatLinkCheckResult(result, quiet = false) {
+  const hasWarnings = (/** @type {import('../adapters/check-links.js').ResultLinksFile} */ f) =>
+    f.fragmentsMissing.length > 0 || f.links.some(l => l.warning === 'permanent-redirect');
   const withIssues = result.files.filter(f =>
-    f.error || f.links.some(l => !l.ok || l.skipped || l.warning === 'permanent-redirect')
+    f.error || hasWarnings(f) || f.links.some(l => !l.ok || l.skipped)
   );
   const countIssues = withIssues.filter(f =>
-    f.error || f.links.some(l => !l.ok || l.warning === 'permanent-redirect')
+    f.error || hasWarnings(f) || f.links.some(l => !l.ok)
   ).length;
   const countClean = result.files.length - withIssues.length;
 
-  const hasRealIssues = result.countBroken > 0 || result.countFileErrors > 0
-    || result.files.some(f => f.links.some(l => l.warning === 'permanent-redirect'));
+  const hasRealIssues = result.countBroken > 0 || result.countFileErrors > 0 || result.files.some(hasWarnings);
   if (quiet && !hasRealIssues) return '';
 
   const lines = [s.bold('Links (built-in http/https)')];
@@ -117,10 +120,12 @@ export function formatLinkCheckResult(result, quiet = false) {
     const warned = file.links.filter(l => l.ok && !l.skipped && l.warning === 'permanent-redirect');
     const skipped = file.links.filter(l => l.skipped);
     const checked = file.links.filter(l => !l.skipped);
+    const missing = file.fragmentsMissing;
 
     const parts = [];
     if (broken.length > 0) parts.push(s.warning(`${broken.length} broken`));
     if (warned.length > 0) parts.push(s.warning(`${warned.length} permanent ${warned.length === 1 ? 'redirect' : 'redirects'}`));
+    if (missing.length > 0) parts.push(s.warning(`${missing.length} missing fragment ${missing.length === 1 ? 'target' : 'targets'}`));
     if (skipped.length > 0) parts.push(`${skipped.length} skipped`);
     const checkedStr = checked.length > 0
       ? `${checked.length} ${checked.length === 1 ? 'link' : 'links'} checked, `
@@ -130,13 +135,16 @@ export function formatLinkCheckResult(result, quiet = false) {
     if (!quiet) {
       for (const link of broken) {
         const detail = link.error ?? String(link.status);
-        lines.push(`  ${s.warning('  ✕')} ${link.url} – ${detail}`);
+        lines.push(`  ${s.warning('  ✕')} ${linesLabel(link.lines)}${link.url} – ${detail}`);
       }
       for (const link of warned) {
-        lines.push(`  ${s.warning('  ⚠')} ${link.url} – ${link.redirectStatus} (permanent redirect)`);
+        lines.push(`  ${s.warning('  ⚠')} ${linesLabel(link.lines)}${link.url} – ${link.redirectStatus} (permanent redirect)`);
+      }
+      for (const { fragment, lines: fragmentLines } of missing) {
+        lines.push(`  ${s.warning('  ⚠')} ${linesLabel(fragmentLines)}${fragment} – no element with this ID`);
       }
       for (const link of skipped) {
-        lines.push(`    – ${link.url} – (skipped)`);
+        lines.push(`    – ${linesLabel(link.lines)}${link.url} – (skipped)`);
       }
     }
   }
@@ -150,6 +158,9 @@ export function formatLinkCheckResult(result, quiet = false) {
   const summarySkipped = result.countSkipped > 0
     ? `, ${result.countSkipped} skipped`
     : '';
+  const summaryFragments = result.countFragmentsChecked > 0
+    ? `, ${result.countFragmentsChecked} fragment ${result.countFragmentsChecked === 1 ? 'link' : 'links'} checked`
+    : '';
   const summaryFileErrors = result.countFileErrors > 0
     ? `, ${s.error(`${result.countFileErrors} file ${result.countFileErrors === 1 ? 'error' : 'errors'}`)}`
     : '';
@@ -159,8 +170,11 @@ export function formatLinkCheckResult(result, quiet = false) {
   const summaryBroken = result.countBroken === 0 && result.countFileErrors === 0
     ? s.success('no broken links')
     : s.warning(`${result.countBroken} broken ${result.countBroken === 1 ? 'link' : 'links'}`);
+  const summaryMissing = result.countFragmentsMissing > 0
+    ? `, ${s.warning(`${result.countFragmentsMissing} missing fragment ${result.countFragmentsMissing === 1 ? 'target' : 'targets'}`)}`
+    : '';
 
-  lines.push(`\n  ${filesCount(result.files.length)} · ${summaryCount}${summarySkipped}${summaryFileErrors} · ${fileParts.join(', ')} · ${summaryBroken}`);
+  lines.push(`\n  ${filesCount(result.files.length)} · ${summaryCount}${summarySkipped}${summaryFragments}${summaryFileErrors} · ${fileParts.join(', ')} · ${summaryBroken}${summaryMissing}`);
 
   return lines.join('\n');
 }
@@ -192,6 +206,9 @@ export function formatMinificationResult(result, quiet = false) {
 
   return lines.join('\n');
 }
+
+/** @param {number[]} lines @returns {string} */
+function linesLabel(lines) { return `${lines.length === 1 ? 'Line' : 'Lines'} ${lines.join(', ')}: `; }
 
 /** @param {number} n @returns {string} */
 function filesCount(n) { return `${n} ${n === 1 ? 'file' : 'files'}`; }

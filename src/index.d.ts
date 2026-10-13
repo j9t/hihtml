@@ -22,10 +22,17 @@ export interface ResultCodeValidation {
   countIgnored: number;
 }
 
+export interface ResultCodeDeprecationOccurrence {
+  name: string;
+  line: number;
+  col: number;
+}
+
 export interface ResultCodeDeprecationFile {
   path: string;
   elements: string[];
   attributes: string[];
+  locations: { elements: ResultCodeDeprecationOccurrence[]; attributes: ResultCodeDeprecationOccurrence[] };
   error?: string;
 }
 
@@ -41,6 +48,7 @@ export interface ResultCode {
 
 export interface ResultLinksUrl {
   url: string;
+  lines: number[];
   status: number | null;
   ok: boolean;
   skipped?: boolean;
@@ -49,9 +57,15 @@ export interface ResultLinksUrl {
   error?: string;
 }
 
+export interface ResultLinksFragment {
+  fragment: string;
+  lines: number[];
+}
+
 export interface ResultLinksFile {
   path: string;
   links: ResultLinksUrl[];
+  fragmentsMissing: ResultLinksFragment[];
   countBroken: number;
   error?: string;
 }
@@ -61,6 +75,8 @@ export interface ResultLinks {
   countBroken: number;
   countChecked: number;
   countSkipped: number;
+  countFragmentsChecked: number;
+  countFragmentsMissing: number;
   countFileErrors: number;
 }
 
