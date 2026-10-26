@@ -135,23 +135,24 @@ function strip(content) {
  */
 function findElementClose(content, from, reClose, isStyle) {
   reClose.lastIndex = from;
-  RE_OPEN_SCRIPT.lastIndex = from;
   let close = reClose.exec(content);
-  let script = isStyle ? RE_OPEN_SCRIPT.exec(content) : null;
-  let comment;
   for (;;) {
     if (!close) return null;
     // Only a protector before the closer can swallow it, so the search stops there—a
-    // closer is usually near its opener, keeping the slice small (a `script` gate on
-    // plain `script` text is a deliberate over-approximation of the opener regex)
-    const segment = close.index > from ? content.slice(from, close.index) : '';
+    // closer is usually near its opener, keeping the slice small (the `<script` gate
+    // is an over-approximation of the opener regex that spares a search to the end)
+    const segment = content.slice(from, close.index);
     const at = segment.indexOf('<!--');
-    comment = at === -1 ? -1 : from + at;
-    if (isStyle && script && script.index >= close.index && !/script/i.test(segment)) script = null;
+    const comment = at === -1 ? -1 : from + at;
+    let script = null;
+    if (isStyle && /<script/i.test(segment)) {
+      RE_OPEN_SCRIPT.lastIndex = from;
+      script = RE_OPEN_SCRIPT.exec(content);
+    }
     if (script && script.index < close.index && (comment === -1 || script.index < comment)) {
       const scriptClose = findElementClose(content, script.index + script[0].length, RE_CLOSE_SCRIPT, false);
       from = scriptClose ? scriptClose.index + scriptClose[0].length : script.index + script[0].length;
-    } else if (comment !== -1 && comment < close.index) {
+    } else if (comment !== -1) {
       const commentEnd = content.indexOf('-->', comment + 4);
       from = commentEnd === -1 ? comment + 4 : commentEnd + 3;
     } else {
@@ -159,8 +160,6 @@ function findElementClose(content, from, reClose, isStyle) {
     }
     reClose.lastIndex = from;
     close = reClose.exec(content);
-    RE_OPEN_SCRIPT.lastIndex = from;
-    if (isStyle) script = RE_OPEN_SCRIPT.exec(content);
   }
 }
 
@@ -281,13 +280,13 @@ function extractUrlsAndFragments(stripped, lineAt, ignoreFragments) {
   }
 
   // Merge srcset URLs after attribute URLs, keeping per-file link order stable:
-  // attribute URLs first, srcset URLs second; URLs in both keep lines from each
+  // attribute URLs first, srcset URLs second; URLs in both keep lines from each. The
+  // walk yields each line list sorted and unique, so only merged lists need sorting.
   for (const [url, lines] of srcsetUrls) {
     const existing = urls.get(url);
-    if (existing) for (const line of lines) addLine(urls, url, line);
+    if (existing) urls.set(url, [...new Set([...existing, ...lines])].sort((a, b) => a - b));
     else urls.set(url, lines);
   }
-  for (const [url, lines] of urls) urls.set(url, [...new Set(lines)].sort((a, b) => a - b));
 
   // A `base` element discards the fragment bookkeeping, as the fragments resolve elsewhere
   const fragmentsMissing = hasBase ? [] : [...fragments]
@@ -525,7 +524,7 @@ export async function checkLinks(filePaths, {
   });
 
   const files = filePaths.map(filePath => {
-    const data = fileData.get(filePath) ?? { urls: new Map(), fragmentsMissing: [], countFragmentsChecked: 0, error: 'Unknown error' };
+    const data = /** @type {NonNullable<ReturnType<typeof fileData.get>>} */ (fileData.get(filePath));
     if (data.error) return /** @type {ResultLinksFile} */ ({ path: filePath, links: [], fragmentsMissing: [], countBroken: 0, error: data.error });
 
     const links = [...data.urls].map(([url, lines]) => /** @type {ResultLinksUrl} */ ({ ...urlResults.get(url), url, lines }));

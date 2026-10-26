@@ -1,6 +1,6 @@
 import os from 'node:os';
 
-export const DEFAULT_CONCURRENCY = Math.max(1, Math.min(os.cpus().length || 4, 8));
+export const DEFAULT_CONCURRENCY = Math.min(os.cpus().length || 4, 8);
 
 /**
  * Run an async function over an array with bounded concurrency, preserving order.

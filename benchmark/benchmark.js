@@ -174,7 +174,6 @@ async function main({ argv = process.argv.slice(2), dirWork = __dirname } = {}) 
     } catch (err) {
       // A missing baseline is normal (first run reports absolute numbers only);
       // anything else (corrupt JSON, permissions) is worth surfacing
-      baseline = null;
       if (err.code !== 'ENOENT') {
         console.error(`Warning: Ignoring unreadable baseline (${pathBaseline}): ${err.message}`);
       }

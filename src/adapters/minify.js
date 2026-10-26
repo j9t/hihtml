@@ -120,6 +120,6 @@ export async function minify(filePaths, outputPaths, { preset = 'comprehensive',
     return /** @type {ResultMinificationFile} */ ({ path: filePath, sizeOriginal, sizeMinified });
   });
 
-  const saved = files.reduce((acc, f) => f.error ? acc : acc + Math.max(0, (f.sizeOriginal || 0) - (f.sizeMinified || 0)), 0);
+  const saved = files.reduce((acc, f) => f.error ? acc : acc + Math.max(0, f.sizeOriginal - f.sizeMinified), 0);
   return { files, saved };
 }

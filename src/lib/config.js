@@ -108,7 +108,7 @@ async function readConfigFile(cwd, fileName) {
  * @param {string} [filePath]
  * @returns {Promise<HihtmlConfig>}
  */
-export async function loadConfig(cwd = process.cwd(), filePath = undefined) {
+export async function loadConfig(cwd = process.cwd(), filePath) {
   if (filePath !== undefined) {
     const resolved = path.resolve(cwd, filePath);
     let parsed;

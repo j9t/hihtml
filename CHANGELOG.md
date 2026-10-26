@@ -4,6 +4,14 @@ All notable changes to hihtml are documented in this file, which is (mostly) AI-
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2] - 2026-10-26
+
+### Changed
+
+* Updated HTML Minifier Next to 9, which no longer minifies JSON in `script` elements unless the `comprehensive` preset (hihtml’s default) or `minifyJSON` is used
+* Sped up link checking on pages with many `style` elements, or with comments inside `style` elements, by no longer searching the rest of the document for `script` openers that cannot matter
+* Removed dead and no-op code across the adapters, CLI, and library helpers (redundant guards and conversions, unreachable fallbacks, unused defaults, no-op statements), and limited the sorting of link line numbers to URLs found both in `srcset` and in other attributes
+
 ## [1.8.1] - 2026-10-14
 
 ### Fixed

@@ -106,7 +106,7 @@ export async function validate(filePaths, { preset = 'standard', ignore = [], co
 
     let report;
     try {
-      report = await Promise.resolve(validator.validateString(content, filePath));
+      report = await validator.validateString(content, filePath);
     } catch (err) {
       throw new Error(`Error validating ${filePath}: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
     }
