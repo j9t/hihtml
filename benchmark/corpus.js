@@ -196,6 +196,29 @@ var urls = ["https://example.org/${word(rnd)}", "https://example.net/${word(rnd)
   return parts.join('\n');
 }
 
+// A page-builder-style page: Each component carries its own `style` element, some
+// wrapped in legacy `<!-- … -->` hiding, and scripts only come at the end
+function stylesPage() {
+  const rnd = mulberry32(5);
+  const parts = [header(rnd, 'Styles'), '<main>'];
+
+  for (let i = 0; i < 400; i++) {
+    const rules = `.c-${i} { padding: ${i % 12}px; color: #${String(i % 1000).padStart(3, '0')}; }`;
+    const css = i % 3 === 0 ? `<!--\n${rules}\n-->` : rules;
+    parts.push(`<section class="c-${i}" id="c-${i}">
+<style>
+${css}
+</style>
+<h2><a href="#c-${i}">${word(rnd, 3, 6)}</a></h2>
+<p>${sentence(rnd)} <a href="https://cdn.${CORPUS_HOSTS[i % CORPUS_HOSTS.length]}/c/${i}">${word(rnd, 3, 6)}</a></p>
+</section>`);
+  }
+
+  parts.push('</main>');
+  parts.push(footer(rnd));
+  return parts.join('\n');
+}
+
 /** @typedef {{ name: string, content: string }} CorpusFile */
 
 /**
@@ -208,6 +231,7 @@ export function generate() {
     { name: 'article', content: articlePage() },
     { name: 'links', content: linksPage() },
     { name: 'markup', content: markupPage() },
+    { name: 'styles', content: stylesPage() },
   ];
 }
 

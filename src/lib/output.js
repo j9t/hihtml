@@ -117,7 +117,7 @@ export function formatLinkCheckResult(result, quiet = false) {
     }
 
     const broken = file.links.filter(l => !l.ok);
-    const warned = file.links.filter(l => l.ok && !l.skipped && l.warning === 'permanent-redirect');
+    const warned = file.links.filter(l => l.ok && l.warning === 'permanent-redirect');
     const skipped = file.links.filter(l => l.skipped);
     const checked = file.links.filter(l => !l.skipped);
     const missing = file.fragmentsMissing;

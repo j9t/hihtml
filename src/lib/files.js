@@ -64,9 +64,9 @@ export async function read(filePaths, { concurrency = DEFAULT_CONCURRENCY, onPro
  * @param {Set<string>} extensions
  * @param {Set<string>} excludedDirs
  * @param {string[]} results
- * @param {string} [dirRoot]
+ * @param {string} dirRoot
  */
-async function walk(dir, extensions, excludedDirs, results, dirRoot = dir) {
+async function walk(dir, extensions, excludedDirs, results, dirRoot) {
   let entries;
   try {
     entries = await fs.promises.readdir(dir, { withFileTypes: true });

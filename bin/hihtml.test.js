@@ -1278,6 +1278,17 @@ describe('URL extraction', () => {
     assert.deepStrictEqual(await found(`<script data-x="<!--"></script><a href="${ok()}">L</a><p>--></p>`), { checked: 1, broken: 0 });
     assert.deepStrictEqual(await found(`<style data-x="<!--"></style><a href="${ok()}">L</a><p>--></p>`), { checked: 1, broken: 0 });
   });
+
+  test('Skips `</style>` inside comments and `<script>` bodies when finding the `<style>` closer', async () => {
+    const hidden = `${testServerBase}/not-found`;
+    assert.deepStrictEqual(await found(`<style><!-- </style> --><!-- </style> -->/* <a href="${hidden}"> */</style><a href="${ok()}">L</a>`), { checked: 1, broken: 0 });
+    assert.deepStrictEqual(await found(`<style><!-- </style> --><script>"</style>"</script>/* <a href="${hidden}"> */</style><a href="${ok()}">L</a>`), { checked: 1, broken: 0 });
+    assert.deepStrictEqual(await found(`<style><script>"</style>"</script><!-- </style> -->/* <a href="${hidden}"> */</style><a href="${ok()}">L</a>`), { checked: 1, broken: 0 });
+  });
+
+  test('Checks URLs after an unclosed `<style>` whose closer candidates are all in comments', async () => {
+    assert.deepStrictEqual(await found(`<style><!-- </style> --><a href="${ok()}">L</a>`), { checked: 1, broken: 0 });
+  });
 });
 
 // Programmatic API: line numbers
@@ -1306,6 +1317,13 @@ describe('Link line numbers', () => {
     const byUrl = Object.fromEntries(result.files[0].links.map(l => [l.url, l.lines]));
     assert.deepStrictEqual(byUrl[`${testServerBase}/ok`], [2]);
     assert.deepStrictEqual(byUrl[`${testServerBase}/not-found`], [3]);
+  });
+
+  test('Reports sorted, unique lines for a URL in both `srcset` and other attributes', async () => {
+    const url = `${testServerBase}/ok`;
+    const result = await checkLinksString(`<img srcset="${url} 1x">\n<a href="${url}">L</a>\n<img src="${url}" srcset="${url} 2x">`);
+    assert.strictEqual(result.files[0].links.length, 1);
+    assert.deepStrictEqual(result.files[0].links[0].lines, [1, 2, 3]);
   });
 
   test('Reports lines for skipped URLs', async () => {

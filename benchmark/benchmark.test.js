@@ -141,7 +141,7 @@ describe('Benchmark', () => {
       try {
         const { files } = await main({ argv: ['--iterations=2'], dirWork });
         for (const taskName of Object.keys(TASKS)) {
-          for (const name of ['small', 'article', 'links', 'markup']) {
+          for (const { name } of generate()) {
             const entry = files[taskName]?.[name];
             assert.ok(entry, `${taskName}/${name} missing from results`);
             assert.strictEqual(typeof entry.time, 'number');
@@ -186,7 +186,7 @@ describe('Benchmark', () => {
       }
       const output = lines.join('\n');
       assert.doesNotMatch(output, /NaN|Infinity|x%/);
-      assert.match(output, /only 1 of 4 file\(s\) have a baseline entry/);
+      assert.match(output, new RegExp(`only 1 of ${generate().length} file\\(s\\) have a baseline entry`));
     });
   });
 });

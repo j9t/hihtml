@@ -15,6 +15,16 @@ import { DEFAULT_CONCURRENCY } from '../src/lib/concurrency.js';
 import { loadConfig } from '../src/lib/config.js';
 import { formatValidationResult, formatDeprecationResult, formatLinkCheckResult, formatMinificationResult, style } from '../src/lib/output.js';
 
+/** @typedef {import('../src/adapters/check-code.js').ResultCode} ResultCode */
+
+/**
+ * @typedef {Object} Report
+ * @property {string} timestamp
+ * @property {string} command
+ * @property {string} input
+ * @property {{ checkCode?: ResultCode, links?: import('../src/adapters/check-links.js').ResultLinks, minify?: import('../src/adapters/minify.js').ResultMinification }} results
+ */
+
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json');
 
@@ -75,7 +85,8 @@ try {
 } catch (err) {
   // A parent directory without search permission fails here, too, for a path
   // that may well be there
-  const reason = err.code === 'ENOENT' || err.code === 'ENOTDIR'
+  const { code } = /** @type {NodeJS.ErrnoException} */ (err);
+  const reason = code === 'ENOENT' || code === 'ENOTDIR'
     ? `No such file or directory: ${opts.input}`
     : `Cannot read ${opts.input}`;
   console.error(styleText('red', reason));
@@ -93,6 +104,7 @@ try {
 // to stay a single argument. Only whitespace triggers it: A Windows path is
 // full of characters an allowlist would flag, and quoting those would make the
 // hint harder to read for no gain.
+/** @param {string} value @returns {string} */
 function shellQuote(value) {
   return /\s/.test(value) ? `'${value.replaceAll("'", "'\\''")}'` : value;
 }
@@ -145,10 +157,10 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
     const outputDir = opts.output ? path.resolve(opts.output) : null;
 
     const extensions = config.extensions
-      ? new Set(config.extensions.map(e => String(e).replace(/^\./, '').toLowerCase()))
+      ? new Set(config.extensions.map(e => e.replace(/^\./, '').toLowerCase()))
       : HTML_EXTENSIONS;
     const excludedDir = config.ignore
-      ? new Set(config.ignore.map(e => String(e).trim()))
+      ? new Set(config.ignore.map(e => e.trim()))
       : EXCLUDED_DIRS;
 
     const files = await collect(inputDir, extensions, excludedDir);
@@ -171,9 +183,10 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       if (opts.checkLinks) commandParts.push('check-links');
     }
 
+    /** @type {Report} */
     const report = {
       timestamp: new Date().toISOString(),
-      command: commandParts.join('+') || 'check-code',
+      command: commandParts.join('+'),
       input: inputDir,
       results: {},
     };
@@ -187,6 +200,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       readProg.complete();
     }
 
+    /** @type {string[]} */
     const sections = [];
     const sectionsPrint = () => {
       const numbered = sections.length > 1;
@@ -204,7 +218,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       console.log(`\n(${reportSuggestion} without \`-q\` for inline output)`);
     };
 
-    /** @type {import('../src/adapters/check-code.js').CheckResult | undefined} */
+    /** @type {ResultCode | undefined} */
     let checkResult;
     if (opts.checkCode || opts.all) {
       const validatePreset = config.validation?.preset ?? 'standard';
@@ -226,6 +240,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
     }
 
     if (opts.checkLinks || opts.all) {
+      /** @type {ReturnType<typeof makeProgress>} */
       let linkProg = { tick: () => {}, complete: () => {} };
       const linkResult = await checkLinks(files, {
         timeout: config.links?.timeout,
@@ -248,7 +263,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
       report.results.links = linkResult;
     }
 
-    if (opts.all && checkResult?.validation.countErrors > 0) {
+    if (opts.all && checkResult && checkResult.validation.countErrors > 0) {
       sectionsPrint();
       console.error(
         '\n' + style.error(`${checkResult.validation.countErrors} validation ${checkResult.validation.countErrors === 1 ? 'error' : 'errors'} found—skipping minification`) + '\n' +
@@ -307,7 +322,7 @@ function makeProgress(label, total, { leadingNewline = false } = {}) {
   } catch (err) {
     if (process.stderr.isTTY) process.stderr.write('\n');
     console.error(style.error(`Error: ${err instanceof Error ? err.message : String(err)}`));
-    process.exit(err?.setupFailed ? 1 : 2);
+    process.exit(err instanceof Error && 'setupFailed' in err ? 1 : 2);
   }
 })();
 
@@ -323,14 +338,14 @@ async function confirmInPlace(dir) {
   );
 
   return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: null });
+    const rl = readline.createInterface({ input: process.stdin });
     rl.once('line', (line) => { resolve(line.trim().toLowerCase() === 'y'); rl.close(); });
     rl.once('close', () => resolve(false));
   });
 }
 
 /**
- * @param {object} report
+ * @param {Report} report
  * @param {string | boolean} fileOpt
  */
 async function saveReport(report, fileOpt) {
