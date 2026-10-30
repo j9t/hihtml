@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +17,7 @@ import { loadConfig } from '../src/lib/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const scriptPath = path.join(__dirname, 'hihtml.js');
-const tempDir = path.join(__dirname, 'temp_test');
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hihtml-'));
 
 // Permission bits don’t apply to root, and `chmod` is a no-op on Windows
 const canTestPermissions = process.platform !== 'win32' && process.getuid?.() !== 0;
@@ -50,7 +51,6 @@ let testServerPort;
 let testServerBase;
 
 before(async () => {
-  fs.mkdirSync(tempDir, { recursive: true });
   fs.writeFileSync(path.join(tempDir, 'clean.html'), HTML_CLEAN);
   fs.writeFileSync(path.join(tempDir, 'deprecated.html'), HTML_DEPRECATED);
   fs.writeFileSync(path.join(tempDir, 'invalid.html'), HTML_INVALID);
