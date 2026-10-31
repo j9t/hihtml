@@ -37,38 +37,38 @@ describe('Benchmark', () => {
       });
     });
 
-    test('`--iterations` falls back to the default when not a number, and to 1 when lower', () => {
+    test('Falls back to the default `--iterations` when not a number, and to 1 when lower', () => {
       assert.strictEqual(parseArgs(['--iterations=many']).iterations, DEFAULT_ITERATIONS);
       assert.strictEqual(parseArgs(['--iterations=0']).iterations, 1);
     });
 
-    test('`--task` selects tasks and deduplicates them', () => {
+    test('Selects and deduplicates tasks with `--task`', () => {
       assert.deepStrictEqual(parseArgs(['--task=check-links', '--task=minify', '--task=check-links']).tasks, ['check-links', 'minify']);
     });
 
-    test('`parseArgs` rejects an unknown task, naming the available ones', () => {
+    test('Rejects an unknown task, naming the available ones', () => {
       assert.throws(() => parseArgs(['--task=nope']), { message: /Unknown task “nope”; available tasks: / });
     });
   });
 
   describe('Timing helpers', () => {
-    test('`fastest` returns the minimum', () => {
+    test('Takes the minimum as `fastest`', () => {
       assert.strictEqual(fastest([3, 1, 2]), 1);
     });
 
-    test('`median` averages the two middle values on an even count', () => {
+    test('Averages the two middle values as `median` on an even count', () => {
       assert.strictEqual(median([1, 2, 3, 4]), 2.5);
       assert.strictEqual(median([1, 2, 3]), 2);
     });
 
-    test('`reproducibility` compares the minima of both iteration halves', () => {
+    test('Compares the minima of both iteration halves for `reproducibility`', () => {
       assert.strictEqual(reproducibility([10, 10, 10, 10]), 0);
       assert.strictEqual(reproducibility([10, 10, 11, 11]), 10);
       assert.strictEqual(reproducibility([10, 10, 20, 20]), 100);
       assert.strictEqual(reproducibility([10]), null);
     });
 
-    test('`spread` measures fastest-to-slowest', () => {
+    test('Measures fastest-to-slowest as `spread`', () => {
       assert.strictEqual(spread([10, 20]), 100);
       assert.strictEqual(spread([10, 10]), 0);
     });
@@ -91,7 +91,7 @@ describe('Benchmark', () => {
   });
 
   describe('Delta formatting', () => {
-    test('`formatTimeDelta` reads small deltas as within noise', () => {
+    test('Reads small deltas as within noise in `formatTimeDelta`', () => {
       assert.strictEqual(formatTimeDelta(105, 100, 10), ' (~+5.0%, within noise)');
       assert.strictEqual(formatTimeDelta(115, 100, 10), ' (+15.0%)');
       assert.strictEqual(formatTimeDelta(100, 100, 10), ' (~+0.0%, within noise)');
@@ -99,13 +99,13 @@ describe('Benchmark', () => {
   });
 
   describe('Corpus', () => {
-    test('`generate` is deterministic', () => {
+    test('Generates the same corpus every time', () => {
       const a = generate();
       const b = generate();
       assert.deepStrictEqual(a, b);
     });
 
-    test('Every absolute URL points at a corpus host, keeping runs offline', () => {
+    test('Points every absolute URL at a corpus host, keeping runs offline', () => {
       for (const file of generate()) {
         for (const match of file.content.matchAll(/https?:\/\/([a-z0-9.-]+)/gi)) {
           const host = match[1];
@@ -117,7 +117,7 @@ describe('Benchmark', () => {
       }
     });
 
-    test('Documents cover the range from small to large', () => {
+    test('Covers the range from small to large documents', () => {
       const sizes = generate().map(file => file.content.length);
       assert.ok(Math.min(...sizes) > 1_000, 'smallest document should be at least 1 KB');
       assert.ok(Math.max(...sizes) > 100_000, 'largest document should exceed 100 KB');
@@ -154,7 +154,7 @@ describe('Benchmark', () => {
       }
     });
 
-    test('`--save` writes a baseline that a later run compares against', async () => {
+    test('Writes a baseline with `--save` that a later run compares against', async () => {
       const dirWork = await fs.mkdtemp(path.join(os.tmpdir(), 'hihtml-benchmark-'));
       try {
         await main({ argv: ['--iterations=2', '--save'], dirWork });

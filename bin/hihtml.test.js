@@ -125,13 +125,13 @@ after(async () => {
 // CLI: Basic flags
 
 describe('CLI flags', () => {
-  test('`--version` prints a version number', () => {
+  test('Prints a version number with `--version`', () => {
     const { stdout, status } = run(['-v']);
     assert.match(stdout.trim(), /^\d+\.\d+\.\d+(-[\w.]+)?$/);
     assert.strictEqual(status, 0);
   });
 
-  test('`--help` prints usage', () => {
+  test('Prints usage with `--help`', () => {
     const { stdout, status } = run(['-h']);
     assert.ok(stdout.includes('hihtml'));
     assert.ok(stdout.includes('--check-code'));
@@ -182,7 +182,7 @@ describe('CLI flags', () => {
     }
   });
 
-  test('`-c -m` runs check and minify', () => {
+  test('Runs check and minify with `-c -m`', () => {
     const outDir = path.join(tempDir, 'cm_out');
     const { stdout, status } = run(['-c', '-m', '-i', path.join(tempDir, 'clean.html'), '-o', outDir]);
     assert.ok(stdout.includes('Validation'));
@@ -191,7 +191,7 @@ describe('CLI flags', () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 
-  test('`-c -l -m` runs all three without validation gate', () => {
+  test('Runs all three without validation gate with `-c -l -m`', () => {
     const outDir = path.join(tempDir, 'clm_out');
     const { stdout, status } = run(['-c', '-l', '-m', '-i', path.join(tempDir, 'links_none.html'), '-o', outDir]);
     assert.ok(stdout.includes('Validation'));
@@ -201,7 +201,7 @@ describe('CLI flags', () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 
-  test('`--all` combined with other mode flags runs as `--all`', () => {
+  test('Runs as `--all` when `--all` is combined with other mode flags', () => {
     const outDir = path.join(tempDir, 'all_c_out');
     const { stdout, status } = run(['-a', '-c', '-i', path.join(tempDir, 'links_none.html'), '-o', outDir]);
     assert.strictEqual(status, 0);
@@ -211,14 +211,14 @@ describe('CLI flags', () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 
-  test('Default mode shows preamble', () => {
+  test('Shows the preamble in default mode', () => {
     const { stdout } = run(['-i', path.join(tempDir, 'clean.html')]);
     assert.ok(stdout.includes('HTML code issues'));
     assert.ok(stdout.includes('-a'));
     assert.ok(stdout.includes('-h'));
   });
 
-  test('Explicit `-c` does not show preamble', () => {
+  test('Does not show the preamble with an explicit `-c`', () => {
     const { stdout } = run(['-c', '-i', path.join(tempDir, 'clean.html')]);
     assert.ok(!stdout.includes('HTML code issues'));
   });
@@ -344,7 +344,7 @@ describe('CLI `--check-code`', () => {
     assert.strictEqual(status, 0);
   });
 
-  test('No args defaults to `--check-code` behavior', () => {
+  test('Defaults to `--check-code` behavior without arguments', () => {
     const { stdout } = run(['-i', path.join(tempDir, 'clean.html')]);
     assert.ok(stdout.includes('Validation'));
   });
@@ -398,19 +398,19 @@ describe('CLI `--check-links`', () => {
     fs.rmSync(ignoreDir, { recursive: true, force: true });
   });
 
-  test('`-l` alone does not run markup check', () => {
+  test('Does not run the markup check with `-l` alone', () => {
     const { stdout } = run(['-l', '-i', path.join(tempDir, 'links_none.html')]);
     assert.ok(!stdout.includes('Validation'));
     assert.ok(!stdout.includes('Deprecated'));
   });
 
-  test('`-c -l` runs both markup check and link check', () => {
+  test('Runs both markup check and link check with `-c -l`', () => {
     const { stdout } = run(['-c', '-l', '-i', path.join(tempDir, 'links_none.html')]);
     assert.ok(stdout.includes('Validation'));
     assert.ok(stdout.includes('Links'));
   });
 
-  test('`--all` includes link check', () => {
+  test('Includes the link check with `--all`', () => {
     // invalid.html has no http/https links, so link check completes instantly
     const outDir = path.join(tempDir, 'all_links_out');
     const { stdout } = run(['-a', '-i', path.join(tempDir, 'links_none.html'), '-o', outDir]);
@@ -418,7 +418,7 @@ describe('CLI `--check-links`', () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 
-  test('`--all` still exits `1` for validation errors (link check does not change gate)', () => {
+  test('Still exits `1` for validation errors with `--all` (link check does not change gate)', () => {
     // invalid.html has no http/https links, so link check completes quickly before the gate
     const outDir = path.join(tempDir, 'all_links_invalid_out');
     const { status } = run(['-a', '-i', path.join(tempDir, 'invalid.html'), '-o', outDir]);
@@ -426,7 +426,7 @@ describe('CLI `--check-links`', () => {
     fs.rmSync(outDir, { recursive: true, force: true });
   });
 
-  test('Report includes "links" section when `-l` is set', () => {
+  test('Includes a “links” section in the report when `-l` is set', () => {
     const reportPath = path.join(tempDir, 'links-report.json');
     run(['-l', '-i', path.join(tempDir, 'links_none.html'), '-r', reportPath]);
     assert.ok(fs.existsSync(reportPath));
@@ -438,7 +438,7 @@ describe('CLI `--check-links`', () => {
     fs.unlinkSync(reportPath);
   });
 
-  test('Report command field reflects flags used', () => {
+  test('Reflects the flags used in the report’s command field', () => {
     const reportPath = path.join(tempDir, 'cmd-report.json');
     run(['-c', '-l', '-i', path.join(tempDir, 'links_none.html'), '-r', reportPath]);
     const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
@@ -494,7 +494,7 @@ describe('CLI `--minify`', () => {
     fs.unlinkSync(settingsPath);
   });
 
-  test('Output file is not larger than input', () => {
+  test('Does not make the output file larger than the input', () => {
     const outDir = path.join(tempDir, 'minify_out3');
     run(['-m', '-i', path.join(tempDir, 'clean.html'), '-o', outDir]);
     const original = fs.statSync(path.join(tempDir, 'clean.html')).size;
@@ -591,7 +591,7 @@ describe('CLI `--report`', () => {
     assert.ok('results' in report);
   });
 
-  test('Report contains check results', () => {
+  test('Includes check results in the report', () => {
     run(['-c', '-i', path.join(tempDir, 'clean.html'), '-r', reportPath]);
     const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
     assert.ok('checkCode' in report.results);
@@ -799,12 +799,12 @@ describe('Validate files', () => {
     assert.ok(Array.isArray(result.files));
   });
 
-  test('Clean HTML reports no errors', async () => {
+  test('Reports no errors for clean HTML', async () => {
     const result = await validate([fileClean]);
     assert.strictEqual(result.countErrors, 0);
   });
 
-  test('Each file result has path and messages', async () => {
+  test('Gives each file result a path and messages', async () => {
     const result = await validate([fileClean]);
     assert.strictEqual(result.files[0].path, fileClean);
     assert.ok(Array.isArray(result.files[0].messages));
@@ -839,7 +839,7 @@ describe('Validate files', () => {
     assert.strictEqual(result.countIgnored, 0);
   });
 
-  test('Ignored rule IDs are tagged and not counted as errors', async () => {
+  test('Tags ignored rule IDs and does not count them as errors', async () => {
     const base = await validate([fileInvalid]);
     const ruleIds = [...new Set(base.files[0].messages.map(m => m.ruleId))];
 
@@ -884,7 +884,7 @@ describe('Validate files', () => {
     await assert.rejects(() => validate([fileClean], { preset: [] }), /preset/);
   });
 
-  test('Non-matching ignore list does not suppress errors', async () => {
+  test('Does not suppress errors with a non-matching ignore list', async () => {
     const base = await validate([fileInvalid]);
     const result = await validate([fileInvalid], { ignore: ['no-such-rule'] });
     assert.strictEqual(result.countErrors, base.countErrors);
@@ -907,7 +907,7 @@ describe('Check code', () => {
     assert.ok('countIssues' in result.deprecation);
   });
 
-  test('Clean HTML reports no issues', async () => {
+  test('Reports no issues for clean HTML', async () => {
     const result = await checkCode([fileClean]);
     assert.strictEqual(result.validation.countErrors, 0);
     assert.strictEqual(result.deprecation.countIssues, 0);
@@ -949,7 +949,7 @@ describe('Check code string', () => {
     assert.ok('countIssues' in result.deprecation);
   });
 
-  test('Clean HTML reports no issues', async () => {
+  test('Reports no issues for clean HTML', async () => {
     const result = await checkCodeString(HTML_CLEAN);
     assert.strictEqual(result.validation.countErrors, 0);
     assert.strictEqual(result.deprecation.countIssues, 0);
@@ -1139,7 +1139,7 @@ describe('Check links', () => {
     assert.strictEqual(result.files[0].countBroken, 0);
   });
 
-  test('`countSkipped` is 0 when no ignore list given', async () => {
+  test('Sets `countSkipped` to 0 when no ignore list is given', async () => {
     const result = await checkLinks([path.join(tempDir, 'links_ok.html')]);
     assert.strictEqual(result.countSkipped, 0);
   });
@@ -1176,7 +1176,7 @@ describe('Check links string', () => {
     assert.strictEqual(result.files[0].links[0].ok, false);
   });
 
-  test('No http/https links returns empty result', async () => {
+  test('Returns an empty result without http/https links', async () => {
     const result = await checkLinksString(HTML_CLEAN);
     assert.strictEqual(result.countBroken, 0);
     assert.strictEqual(result.countChecked, 0);
@@ -1193,55 +1193,55 @@ describe('URL extraction', () => {
     return { checked: r.countChecked, broken: r.countBroken };
   };
 
-  test('`href` double-quoted', async () => {
+  test('Extracts a double-quoted `href`', async () => {
     assert.deepStrictEqual(await found(`<a href="${ok()}">L</a>`), { checked: 1, broken: 0 });
   });
 
-  test('`href` single-quoted', async () => {
+  test('Extracts a single-quoted `href`', async () => {
     assert.deepStrictEqual(await found(`<a href='${ok()}'>L</a>`), { checked: 1, broken: 0 });
   });
 
-  test('`href` unquoted', async () => {
+  test('Extracts an unquoted `href`', async () => {
     assert.deepStrictEqual(await found(`<a href=${ok()}>L</a>`), { checked: 1, broken: 0 });
   });
 
-  test('`src` double-quoted', async () => {
+  test('Extracts a double-quoted `src`', async () => {
     assert.deepStrictEqual(await found(`<img src="${ok()}">`), { checked: 1, broken: 0 });
   });
 
-  test('`src` single-quoted', async () => {
+  test('Extracts a single-quoted `src`', async () => {
     assert.deepStrictEqual(await found(`<img src='${ok()}'>`), { checked: 1, broken: 0 });
   });
 
-  test('`src` unquoted', async () => {
+  test('Extracts an unquoted `src`', async () => {
     assert.deepStrictEqual(await found(`<img src=${ok()}>`), { checked: 1, broken: 0 });
   });
 
-  test('`action` double-quoted', async () => {
+  test('Extracts a double-quoted `action`', async () => {
     assert.deepStrictEqual(await found(`<form action="${ok()}"></form>`), { checked: 1, broken: 0 });
   });
 
-  test('`action` single-quoted', async () => {
+  test('Extracts a single-quoted `action`', async () => {
     assert.deepStrictEqual(await found(`<form action='${ok()}'></form>`), { checked: 1, broken: 0 });
   });
 
-  test('`action` unquoted', async () => {
+  test('Extracts an unquoted `action`', async () => {
     assert.deepStrictEqual(await found(`<form action=${ok()}></form>`), { checked: 1, broken: 0 });
   });
 
-  test('`srcset` double-quoted', async () => {
+  test('Extracts a double-quoted `srcset`', async () => {
     assert.deepStrictEqual(await found(`<img srcset="${ok()} 2x">`), { checked: 1, broken: 0 });
   });
 
-  test('`srcset` single-quoted', async () => {
+  test('Extracts a single-quoted `srcset`', async () => {
     assert.deepStrictEqual(await found(`<img srcset='${ok()} 2x'>`), { checked: 1, broken: 0 });
   });
 
-  test('`href` with spaces around `=`', async () => {
+  test('Extracts an `href` with spaces around `=`', async () => {
     assert.deepStrictEqual(await found(`<a href = "${ok()}">link</a>`), { checked: 1, broken: 0 });
   });
 
-  test('`srcset` with spaces around `=`', async () => {
+  test('Extracts a `srcset` with spaces around `=`', async () => {
     assert.deepStrictEqual(await found(`<img srcset = "${ok()} 2x">`), { checked: 1, broken: 0 });
   });
 
@@ -1492,7 +1492,7 @@ describe('Minify files', () => {
     fs.unlinkSync(outPath);
   });
 
-  test('Output file is not larger than input', async () => {
+  test('Does not make the output file larger than the input', async () => {
     const outPath = path.join(tempDir, 'minify_size_out.html');
     const result = await minify([fileClean], [outPath]);
     assert.ok(result.files[0].sizeOriginal >= result.files[0].sizeMinified);
@@ -1506,7 +1506,7 @@ describe('Minify files', () => {
     fs.unlinkSync(outPath);
   });
 
-  test('`saved` reflects bytes reduced', async () => {
+  test('Reflects the bytes reduced in `saved`', async () => {
     const outPath = path.join(tempDir, 'minify_saved_out.html');
     const result = await minify([fileClean], [outPath]);
     const expected = Math.max(0, result.files[0].sizeOriginal - result.files[0].sizeMinified);
@@ -1530,7 +1530,7 @@ describe('Minify files', () => {
     assert.ok(!fs.existsSync(outPath));
   });
 
-  test('Preset collapses whitespace by default', async () => {
+  test('Collapses whitespace by default with the preset', async () => {
     const filePath = path.join(tempDir, 'whitespace.html');
     const outPath = path.join(tempDir, 'whitespace_preset_out.html');
     const html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p>  Hello   world  </p></body></html>';
@@ -1547,7 +1547,7 @@ describe('Minify files', () => {
     assert.ok(!fs.existsSync(outPath));
   });
 
-  test('Overriding `collapseWhitespace: false` preserves whitespace', async () => {
+  test('Preserves whitespace when overriding with `collapseWhitespace: false`', async () => {
     const filePath = path.join(tempDir, 'whitespace.html');
     const outPath = path.join(tempDir, 'whitespace_override_out.html');
     const html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Test</title></head><body><p>  Hello   world  </p></body></html>';
@@ -1567,7 +1567,7 @@ describe('Minify string', () => {
     assert.strictEqual(typeof result, 'string');
   });
 
-  test('Output is not larger than input', async () => {
+  test('Does not make the output larger than the input', async () => {
     const result = await minifyString(HTML_CLEAN);
     assert.ok(Buffer.byteLength(result) <= Buffer.byteLength(HTML_CLEAN));
   });
@@ -1768,7 +1768,7 @@ describe('Load config', () => {
     fs.rmSync(configDir, { recursive: true, force: true });
   });
 
-  test('hihtml.config.json takes precedence over .hihtml.json', async () => {
+  test('Gives hihtml.config.json precedence over .hihtml.json', async () => {
     const configDir = path.join(tempDir, 'bothfileconfig');
     fs.mkdirSync(configDir, { recursive: true });
     fs.writeFileSync(path.join(configDir, 'hihtml.config.json'), JSON.stringify({ validation: { preset: 'a11y' } }));
@@ -1798,7 +1798,7 @@ describe('Load config', () => {
     fs.rmSync(configDir, { recursive: true, force: true });
   });
 
-  test('.hihtml.json takes precedence over package.json', async () => {
+  test('Gives .hihtml.json precedence over package.json', async () => {
     const configDir = path.join(tempDir, 'bothconfig');
     fs.mkdirSync(configDir, { recursive: true });
     fs.writeFileSync(path.join(configDir, '.hihtml.json'), JSON.stringify({ validation: { preset: 'a11y' } }));
