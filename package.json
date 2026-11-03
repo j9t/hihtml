@@ -5,17 +5,17 @@
   },
   "dependencies": {
     "commander": "^15.0.0",
-    "entities": "^8.1.0",
-    "html-minifier-next": "^9.1.1",
-    "html-validate": "^11.17.0",
+    "entities": "^9.0.0",
+    "html-minifier": "^5.0.0",
+    "html-validate": "^11.18.0",
     "obsohtml": "^2.1.1"
   },
   "description": "The HTML supertool to validate, link-check, and minify web pages",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.6.5",
-    "eslint": "^10.13.0",
-    "globals": "^17.13.0",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
     "typescript": "^7.0.2"
   },
   "exports": {
@@ -35,7 +35,6 @@
     "conformance",
     "html",
     "html-minifier",
-    "html-minifier-next",
     "html-validate",
     "link-check",
     "links",
@@ -63,5 +62,5 @@
   },
   "type": "module",
   "types": "src/index.d.ts",
-  "version": "1.8.2"
+  "version": "1.8.3"
 }

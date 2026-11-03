@@ -188,7 +188,7 @@ export function formatMinificationResult(result, quiet = false) {
   const hasErrors = result.files.some(f => f.error);
   if (quiet && !hasErrors) return '';
 
-  const lines = [s.bold('Minification (HTML Minifier Next)')];
+  const lines = [s.bold('Minification (HTML Minifier)')];
   let saved = 0;
 
   for (const file of result.files) {

@@ -4,6 +4,12 @@ All notable changes to hihtml are documented in this file, which is (mostly) AI-
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.3] - 2026-11-03
+
+### Changed
+
+* Switched from HTML Minifier Next to HTML Minifier 5 (its continuation under the original name), which also fixes how ampersands in attribute values are kept or escaped
+
 ## [1.8.2] - 2026-10-26
 
 ### Changed

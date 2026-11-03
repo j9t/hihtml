@@ -7,7 +7,7 @@
 // (`check-links`—every absolute URL points at an `example.*` host that is
 // passed to the checker’s `ignore` list, so no network request is made),
 // validation and deprecated-markup checks (`check-code`), and minification
-// (`minify`, via HTML Minifier Next).
+// (`minify`, via HTML Minifier).
 //
 // Usage (from the repo root):
 //   npm run benchmark: Run; if a baseline exists, show deltas
@@ -15,7 +15,7 @@
 //   npm run benchmark -- --iterations=10
 //   npm run benchmark -- --task=check-links: Run a single task (repeatable)
 //
-// Timing follows benchmark.js in html-minifier-next: One warm-up run
+// Timing follows benchmark.js in html-minifier: One warm-up run
 // (discarded), then the fastest of N iterations per file, with the difference
 // between the two iteration halves as the noise band. A delta smaller than
 // that band reads as “within noise” rather than as a win or a regression.
