@@ -33,6 +33,7 @@
   "homepage": "https://github.com/j9t/hihtml",
   "keywords": [
     "conformance",
+    "hihtml",
     "html",
     "html-minifier",
     "html-validate",
