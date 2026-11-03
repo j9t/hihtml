@@ -6,4 +6,4 @@ Only the latest and therefore current version of hihtml is supported. It’s adv
 
 ## Reporting a Vulnerability
 
-To report a vulnerability, please use [GitHub’s private security advisories](https://github.com/j9t/hihtml/security/advisories/new) or email info@meiert.com directly. Do not report vulnerabilities via public issues.
+To report a vulnerability, please use [GitHub’s private security advisories](https://github.com/j9t/hihtml/security/advisories/new) or email security@meiert.com directly. Do not report vulnerabilities via public issues.
