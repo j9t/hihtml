@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/hihtml.svg)](https://www.npmjs.com/package/hihtml) [![Build status](https://github.com/j9t/hihtml/workflows/Tests/badge.svg)](https://github.com/j9t/hihtml/actions) [![Socket](https://badge.socket.dev/npm/package/hihtml)](https://socket.dev/npm/package/hihtml) [![GitHub Sponsors](https://badgen.net/static/Support/Open%20Source/cyan)](https://github.com/sponsors/j9t)
 
-hihtml—“high-quality HTML”—bundles several key HTML tools into one, making HTML validation and semantics control, link checking, and minification as easy as it gets: [HTML-validate](https://html-validate.org/) for validation, [ObsoHTML](https://github.com/j9t/obsohtml) for deprecated markup detection, Node’s built-in `http`/`https` for link checking, and [HTML Minifier Next (HMN)](https://github.com/j9t/html-minifier-next) for minification. hihtml provides a CLI and a programmatic API, and comes with strong defaults but is still highly configurable.
+hihtml—“high-quality HTML”—bundles several key HTML tools into one, making HTML validation and semantics control, link checking, and minification as easy as it gets: [HTML-validate](https://html-validate.org/) for validation, [ObsoHTML](https://github.com/j9t/obsohtml) for deprecated markup detection, Node’s built-in `http`/`https` for link checking, and [HTML Minifier (HM)](https://github.com/j9t/html-minifier) for minification. hihtml provides a CLI and a programmatic API, and comes with strong defaults but is still highly configurable.
 
 ## Usage
 
@@ -182,18 +182,18 @@ Note: `result.files[0].path` will be `'(string input)'`, not a real file path. `
 
 #### `minify(filePaths, outputPaths, options?)`
 
-Minifies HTML files using HTML Minifier Next. Returns `Promise<ResultMinification>`.
+Minifies HTML files using HTML Minifier. Returns `Promise<ResultMinification>`.
 
 * `outputPaths`: Parallel array of output paths; pass the same value as `filePaths` for in-place minification
-* `options.preset`: HMN preset name (default: `'comprehensive'`)
-* `options.options`: Additional HMN options to merge with the preset
+* `options.preset`: HM preset name (default: `'comprehensive'`)
+* `options.options`: Additional HM options to merge with the preset
 
 #### `minifyString(content, options?)`
 
-Minifies an HTML string using HTML Minifier Next. Returns `Promise<string>`. Useful in content-pipeline contexts (Eleventy transforms, middleware, SSR) where HTML is available as a string rather than a file.
+Minifies an HTML string using HTML Minifier. Returns `Promise<string>`. Useful in content-pipeline contexts (Eleventy transforms, middleware, SSR) where HTML is available as a string rather than a file.
 
-* `options.preset`: HMN preset name (default: `'comprehensive'`)
-* `options.options`: Additional HMN options to merge with the preset
+* `options.preset`: HM preset name (default: `'comprehensive'`)
+* `options.options`: Additional HM options to merge with the preset
 
 #### `loadConfig(cwd?, filePath?)`
 
@@ -247,7 +247,7 @@ Partly: HTML-validate comes with an `a11y` preset of accessibility rules, includ
 
 ### Can hihtml format HTML?
 
-No, but it can clean up HTML while keeping its formatting. Formatters like [Prettier](https://prettier.io/) don’t preserve omitted optional tags or unquoted attribute values, so for code that stays readable, run HTML Minifier Next without whitespace collapsing and without CSS, JavaScript, and SVG minification:
+No, but it can clean up HTML while keeping its formatting. Formatters like [Prettier](https://prettier.io/) don’t preserve omitted optional tags or unquoted attribute values, so for code that stays readable, run HTML Minifier without whitespace collapsing and without CSS, JavaScript, and SVG minification:
 
 ```json
 {
@@ -262,11 +262,11 @@ No, but it can clean up HTML while keeping its formatting. Formatters like [Pret
 }
 ```
 
-This overrides some options set with HMN’s `comprehensive` preset. The result keeps indentation and line breaks while still removing optional tags, attribute quotes, comments, and redundant attributes (see [HMN’s options](https://github.com/j9t/html-minifier-next#options-quick-reference) to fine-tune). Keep a copy of the originals, or use `--output`, as `--minify` works in-place.
+This overrides some options set with HM’s `comprehensive` preset. The result keeps indentation and line breaks while still removing optional tags, attribute quotes, comments, and redundant attributes (see [HM’s options](https://github.com/j9t/html-minifier#options-quick-reference) to fine-tune). Keep a copy of the originals, or use `--output`, as `--minify` works in-place.
 
 ### Where do I report issues?
 
-If in doubt or in a hurry, [report issues here](https://github.com/j9t/hihtml/issues). Otherwise, if the issue is related to HTML-validate, [report it with HTML-validate](https://gitlab.com/html-validate/html-validate/-/work_items/new?type=Issue&initialCreationContext=list-route). If the issue is related to ObsoHTML, [report it with ObsoHTML](https://github.com/j9t/obsohtml/issues). For HTML Minifier Next issues, [report them with HMN](https://github.com/j9t/html-minifier-next/issues). All projects are maintained and monitored and should respond promptly. Thank you!
+If in doubt or in a hurry, [report issues here](https://github.com/j9t/hihtml/issues). Otherwise, if the issue is related to HTML-validate, [report it with HTML-validate](https://gitlab.com/html-validate/html-validate/-/work_items/new?type=Issue&initialCreationContext=list-route). If the issue is related to ObsoHTML, [report it with ObsoHTML](https://github.com/j9t/obsohtml/issues). For HTML Minifier issues, [report them with HM](https://github.com/j9t/html-minifier/issues). All projects are maintained and monitored and should respond promptly. Thank you!
 
 ### What does ObsoHTML do here when HTML-validate already reports on deprecated markup?
 
@@ -276,6 +276,6 @@ At the moment, ObsoHTML catches some elements and attributes that HTML-validate 
 
 You might like some of my other work:
 
-* Optimization tools: hihtml · [HTML Minifier Next](https://github.com/j9t/html-minifier-next) · [ObsoHTML](https://github.com/j9t/obsohtml) · [CSS Dedup](https://github.com/j9t/css-dedup) · [Image Guard](https://github.com/j9t/image-guard) · [Compressor.js Next](https://github.com/j9t/compressorjs-next) · [.htaccess Punk](https://github.com/j9t/htaccess-punk)
+* Optimization tools: hihtml · [HTML Minifier](https://github.com/j9t/html-minifier) · [ObsoHTML](https://github.com/j9t/obsohtml) · [CSS Dedup](https://github.com/j9t/css-dedup) · [Image Guard](https://github.com/j9t/image-guard) · [Compressor.js Next](https://github.com/j9t/compressorjs-next) · [.htaccess Punk](https://github.com/j9t/htaccess-punk)
 * Defense tools: [IA Defensa](https://iadefensa.com/solutions/)
-* Resources for quality web development: [Articles](https://meiert.com/topics/development/) · [Books](https://meiert.com/topics/books/) (including [_On Web Development_](https://meiert.com/blog/on-web-development-2/)) · [News](https://frontenddogma.com/) · [Terminology](https://webglossary.info/)
+* Resources for quality web development: [Articles](https://meiert.com/topics/development/) · [Books](https://meiert.com/topics/books/) (e.g., [_On Web Development_](https://meiert.com/blog/on-web-development-2/)) · [News](https://frontenddogma.com/) · [Terminology](https://webglossary.info/)

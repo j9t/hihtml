@@ -21,7 +21,7 @@ import { setupError } from '../lib/config.js';
 const minifierCache = new Map();
 
 /**
- * Load HTML Minifier Next and resolve preset and extra options into a merged options object.
+ * Load HTML Minifier and resolve preset and extra options into a merged options object.
  * The import and preset resolution are cached per preset name.
  * @param {string} preset
  * @param {Record<string, unknown>} options
@@ -32,20 +32,20 @@ async function loadMinifier(preset, options) {
     const promise = (async () => {
       let htmlMinify, getPreset, getPresetNames;
       try {
-        ({ minify: htmlMinify, getPreset, getPresetNames } = await import('html-minifier-next'));
+        ({ minify: htmlMinify, getPreset, getPresetNames } = await import('html-minifier'));
       } catch {
-        throw new Error('Could not load HTML Minifier Next. Ensure it is installed and check for breaking API changes.');
+        throw new Error('Could not load HTML Minifier. Ensure it is installed and check for breaking API changes.');
       }
-      // Skipped if HMN stops exposing its preset names; lowercased as HMN matches names case-insensitively
+      // Skipped if HM stops exposing its preset names; lowercased as HM matches names case-insensitively
       const presetsKnown = typeof getPresetNames === 'function' ? getPresetNames() : undefined;
       if (presetsKnown && !presetsKnown.includes(preset.toLowerCase()))
-        throw setupError(`Unknown HTML Minifier Next preset \`${preset}\` (available: ${presetsKnown.join(', ')})`);
+        throw setupError(`Unknown HTML Minifier preset \`${preset}\` (available: ${presetsKnown.join(', ')})`);
 
       let presetOptions;
       try {
         presetOptions = /** @type {Record<string, unknown>} */ (getPreset(preset) ?? {});
       } catch (err) {
-        throw new Error(`HTML Minifier Next API error—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+        throw new Error(`HTML Minifier API error—the package may have breaking changes: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
       }
       return { htmlMinify, presetOptions };
     })();
@@ -57,7 +57,7 @@ async function loadMinifier(preset, options) {
 }
 
 /**
- * Minify an HTML string using HTML Minifier Next.
+ * Minify an HTML string using HTML Minifier.
  * @param {string} content
  * @param {{ preset?: string, options?: Record<string, unknown> }} [opts]
  * @returns {Promise<string>}
@@ -68,7 +68,7 @@ export async function minifyString(content, { preset = 'comprehensive', options 
 }
 
 /**
- * Minify HTML files using HTML Minifier Next.
+ * Minify HTML files using HTML Minifier.
  * @param {string[]} filePaths - Input file paths
  * @param {string[]} outputPaths - Output file paths (parallel to filePaths; same value = in-place)
  * @param {{ preset?: string, options?: Record<string, unknown>, concurrency?: number, contents?: Map<string, string>, onProgress?: () => void }} [opts]

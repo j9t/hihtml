@@ -1543,7 +1543,7 @@ describe('Minify files', () => {
 
   test('Rejects an unknown preset', async () => {
     const outPath = path.join(tempDir, 'minify_unknown_preset_out.html');
-    await assert.rejects(() => minify([fileClean], [outPath], { preset: 'nope' }), /Unknown HTML Minifier Next preset `nope`/);
+    await assert.rejects(() => minify([fileClean], [outPath], { preset: 'nope' }), /Unknown HTML Minifier preset `nope`/);
     assert.ok(!fs.existsSync(outPath));
   });
 
@@ -1572,8 +1572,13 @@ describe('Minify string', () => {
     assert.ok(Buffer.byteLength(result) <= Buffer.byteLength(HTML_CLEAN));
   });
 
+  test('Keeps an escaped character reference in an attribute value', async () => {
+    const result = await minifyString('<a href="/?a=1&amp;amp;b=2">x</a>');
+    assert.ok(result.includes('href="/?a=1&amp;amp;b=2"'));
+  });
+
   test('Rejects an unknown preset', async () => {
-    await assert.rejects(() => minifyString(HTML_CLEAN, { preset: 'nope' }), /Unknown HTML Minifier Next preset `nope`/);
+    await assert.rejects(() => minifyString(HTML_CLEAN, { preset: 'nope' }), /Unknown HTML Minifier preset `nope`/);
   });
 
   test('Accepts a known preset', async () => {
