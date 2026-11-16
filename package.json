@@ -4,10 +4,10 @@
     "hihtml": "bin/hihtml.js"
   },
   "dependencies": {
-    "commander": "^15.0.0",
+    "commander": "^15.1.0",
     "entities": "^9.0.0",
-    "html-minifier": "^5.0.1",
-    "html-validate": "^11.21.0",
+    "html-minifier": "^5.2.0",
+    "html-validate": "^11.21.1",
     "obsohtml": "^2.1.1"
   },
   "description": "The HTML supertool to validate, link-check, and minify web pages",
