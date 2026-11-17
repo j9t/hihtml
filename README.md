@@ -237,15 +237,15 @@ hihtml.config.json takes precedence over package.json when both are present.
 
 ## FAQ
 
-### How do I only run select checks?
+### How Do I Only Run Select Checks?
 
 Use the individual flags (`-c`, `-l`, `-m`) instead of `--all`/`-a`. Each flag only exits `1` for issues within its own scope, so you control exactly what affects the exit code. To suppress specific HTML-validate rule IDs without disabling validation entirely, use `validation.ignore` in your configuration. To suppress specific broken links or fragment warnings without skipping link checking altogether, use `links.ignore`.
 
-### Can hihtml check accessibility?
+### Can hihtml Check Accessibility?
 
 Partly: HTML-validate comes with an `a11y` preset of accessibility rules, including several [WCAG techniques](https://www.w3.org/WAI/WCAG22/Techniques/#html). Combine it with standard validation via `"validation": { "preset": ["standard", "a11y"] }`, and suppress individual rules via `validation.ignore`. These checks only look at HTML—they’re neither a substitute for testing rendered pages with tools like [axe](https://github.com/dequelabs/axe-core) and [Pa11y](https://pa11y.org/), nor for manual testing.
 
-### Can hihtml format HTML?
+### Can hihtml Format HTML?
 
 No, but it can clean up HTML while keeping its formatting. Formatters like [Prettier](https://prettier.io/) don’t preserve omitted optional tags or unquoted attribute values, so for code that stays readable, run HTML Minifier without whitespace collapsing and without CSS, JavaScript, and SVG minification:
 
@@ -264,11 +264,11 @@ No, but it can clean up HTML while keeping its formatting. Formatters like [Pret
 
 This overrides some options set with HM’s `comprehensive` preset. The result keeps indentation and line breaks while still removing optional tags, attribute quotes, comments, and redundant attributes (see [HM’s options](https://github.com/j9t/html-minifier#options-quick-reference) to fine-tune). Keep a copy of the originals, or use `--output`, as `--minify` works in-place.
 
-### Where do I report issues?
+### Where Do I Report Issues?
 
 If in doubt or in a hurry, [report issues here](https://github.com/j9t/hihtml/issues). Otherwise, if the issue is related to HTML-validate, [report it with HTML-validate](https://gitlab.com/html-validate/html-validate/-/work_items/new?type=Issue&initialCreationContext=list-route). If the issue is related to ObsoHTML, [report it with ObsoHTML](https://github.com/j9t/obsohtml/issues). For HTML Minifier issues, [report them with HM](https://github.com/j9t/html-minifier/issues). All projects are maintained and monitored and should respond promptly. Thank you!
 
-### What does ObsoHTML do here when HTML-validate already reports on deprecated markup?
+### What Does ObsoHTML Do Here When HTML-validate Already Reports on Deprecated Markup?
 
 At the moment, ObsoHTML catches some elements and attributes that HTML-validate doesn’t. Once HTML-validate covers everything ObsoHTML covers, ObsoHTML is going to be removed from hihtml. Note that ObsoHTML is purely informational—it doesn’t prevent minification when used with the `--all`/`-a` flag.
 
