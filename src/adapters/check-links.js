@@ -6,12 +6,12 @@ import { decodeHTMLAttribute } from 'entities';
 import { runWithConcurrency } from '../lib/concurrency.js';
 
 const require = createRequire(import.meta.url);
-const { version } = require('../../package.json');
+const { homepage, version } = require('../../package.json');
 
 export const DEFAULT_LINK_CONCURRENCY = 8;
 export const DEFAULT_LINK_TIMEOUT = 10_000;
 
-const USER_AGENT = `hihtml/${version} link-checker`;
+const USER_AGENT = `hihtml/${version} (+${homepage}; link-checker)`;
 
 // URL-carrying attribute names, with `\b`-style word-boundary semantics: an exact
 // `href`, `src`, `action`, or `srcset`, or the same after any non-word character

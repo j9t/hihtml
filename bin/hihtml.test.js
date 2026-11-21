@@ -17,6 +17,7 @@ import { loadConfig } from '../src/lib/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const scriptPath = path.join(__dirname, 'hihtml.js');
+const { version } = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8'));
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hihtml-'));
 
 // Permission bits don’t apply to root, and `chmod` is a no-op on Windows
@@ -77,6 +78,8 @@ before(async () => {
           break;
         case '/requires-accept':
           res.writeHead(req.headers.accept ? 200 : 403); res.end(); break;
+        case '/requires-user-agent':
+          res.writeHead(req.headers['user-agent'] === `hihtml/${version} (+https://github.com/j9t/hihtml; link-checker)` ? 200 : 403); res.end(); break;
         case "/you_aren't_gonna_need_it":
           res.writeHead(200); res.end(); break;
         case '/slow':
@@ -1050,6 +1053,15 @@ describe('Check links', () => {
     fs.writeFileSync(acceptFile,
       `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="${testServerBase}/requires-accept">Accept</a></body></html>`);
     const result = await checkLinks([acceptFile]);
+    assert.strictEqual(result.countBroken, 0);
+    assert.strictEqual(result.files[0].links[0].status, 200);
+  });
+
+  test('Identifies itself with name, version, and URL in the User-Agent header', async () => {
+    const userAgentFile = path.join(tempDir, 'links_requires_user_agent.html');
+    fs.writeFileSync(userAgentFile,
+      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>T</title></head><body><a href="${testServerBase}/requires-user-agent">User agent</a></body></html>`);
+    const result = await checkLinks([userAgentFile]);
     assert.strictEqual(result.countBroken, 0);
     assert.strictEqual(result.files[0].links[0].status, 200);
   });
