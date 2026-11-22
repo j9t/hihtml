@@ -181,14 +181,14 @@ async function main({ argv = process.argv.slice(2), dirWork = __dirname } = {}) 
   }
 
   console.log(`Benchmarking ${args.tasks.length} task(s) × ${files.length} file(s), fastest of ${args.iterations} iteration(s)`);
-  console.log('* check-links runs with all corpus URLs ignored, so no network requests are made');
+  console.log('• Link-check runs with all corpus URLs ignored, so no network requests are made');
 
   if (baseline) {
     const origin = baseline.git ? `${baseline.git.branch} @ ${baseline.git.commit}` : '(unknown revision)';
     const when = baseline.created ? new Date(baseline.created).toLocaleString() : 'unknown date';
     console.log(`Comparing against baseline: ${origin} (saved ${when})`);
     if (baseline.iterations !== undefined && baseline.iterations !== args.iterations) {
-      console.log(`* Warning: Baseline used ${baseline.iterations} iteration(s); deltas may not be comparable`);
+      console.log(`• Warning: Baseline used ${baseline.iterations} iteration(s); deltas may not be comparable`);
     }
   }
   console.log('');

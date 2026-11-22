@@ -1,8 +1,8 @@
 // Synthetic benchmark corpus for hihtml.
 //
 // Generates a deterministic set of HTML documents that exercise hihtml’s
-// CPU-bound paths: Link extraction and fragment checking (check-links),
-// validation and deprecated-markup checks (check-code), and minification
+// CPU-bound paths: Link extraction and fragment checking (`check-links`),
+// validation and deprecated-markup checks (`check-code`), and minification
 // (minify). Every absolute URL points at an `example.*` host, and the
 // benchmark passes those hosts to the link checker’s `ignore` list, so no
 // network request is ever made.
