@@ -6,7 +6,7 @@
   "dependencies": {
     "commander": "^15.1.0",
     "entities": "^9.0.0",
-    "html-minifier": "^5.2.0",
+    "html-minifier": "^5.4.1",
     "html-validate": "^11.21.1",
     "obsohtml": "^2.1.1"
   },
