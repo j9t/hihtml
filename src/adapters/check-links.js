@@ -8,8 +8,8 @@ import { runWithConcurrency } from '../lib/concurrency.js';
 const require = createRequire(import.meta.url);
 const { homepage, version } = require('../../package.json');
 
-export const DEFAULT_LINK_CONCURRENCY = 8;
-export const DEFAULT_LINK_TIMEOUT = 10_000;
+const DEFAULT_LINK_CONCURRENCY = 8;
+const DEFAULT_LINK_TIMEOUT = 10_000;
 
 const USER_AGENT = `hihtml/${version} (+${homepage}; link-checker)`;
 
